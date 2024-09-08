@@ -44,4 +44,93 @@ summary(car_lm_fit)
 
 (i) From the result, we see a significant *p*-value and a sufficiently large F statistics for the overall model fit, which suggests that there exist a linear relationship between mpg and other predictors.
 
-(ii)
+(ii) From the above linear model fit summary, we see variables 'weight', 'year', and 'origin' are the most significant predictors.
+
+(iii) The coefficient of 'year' is statistical significant and positive, which suggests that year is positively associated with the outcome variable mpg. This implies that as time goes by, the car manufacturers improved cars' mpg, possibly by innovating new technology.
+
+```{r diagnostic plot}
+# (d) diagnostic plots
+plot(car_lm_fit)
+```
+
+From the diagnostic plots (especially the Residuals vs. Leverage plot), we can see that observation 327, 394 seems to have a large residuals compared to the rest, which suggests that they are potentially outliers. Observation 14 has a large leverage value so that it is a point of large impact.
+
+```{r update model with interactions}
+# (e) linear regression w/ interaction effects
+summary(update(car_lm_fit, . ~ . + horsepower:acceleration))
+summary(update(car_lm_fit, . ~ . + horsepower:weight))
+```
+
+Intuitively, we might think that the interactions between horsepower & acceleration **and** horsepower & car weight may have significant influence on car's mpg.
+
+From the result of linear model fit with added interaction terms, we can see that as acceleration increases, the effect of horsepower on car's mpg becomes negative with statistical significance. Cars with higher acceleration and higher horsepower will tend to have even lower mpg than would be expected from each of these two variables individually.
+
+For the interactions between horsepower and car weight, we see a significantly positive effect, whereas car weight & horsepower on their own have negative effects on car mpg. This suggests that as weight increases, the negative effect of horsepower on car's mpg is moderated. Or in other words, the drop of fuel efficiency of high horsepower car is less severe for high weight cars compared to lighter cars.
+
+```{r different transformations}
+# (f) different transformation of variables
+
+# log transform of horsepower
+
+car_lm_fit_log_hp <- lm (mpg ~ . + log(horsepower) - name, data = Auto)
+summary(car_lm_fit_log_hp)
+
+# quadratic transform of horsepower
+
+car_lm_fit_sq_hp <- lm (mpg ~ . + I((horsepower)^2) - name, data = Auto)
+summary(car_lm_fit_sq_hp)
+```
+
+From the model fit results, we can see that both the natural log and the quadratic transform of variable 'horsepower' showed significant effects. We can also observe from the F-statistics that the model improved with the addition of transformed variables. So we would expect that horsepower has a non-linear relationship with mpg, which is the reason that adding transformed variables improves the overall model.
+
+**Question 4 (3.7-15)**
+
+```{r model fit}
+# (a) simple regression model fit
+#install.packages("MASS")
+library(MASS)
+predictors_bos <- names(Boston)[names(Boston) != "crim"] # Exclude response variable 'crim'
+
+#Empty lists to store statistics
+coef_l <- c()
+pval_l <- c()
+r2_l <- c()
+
+#For loop, looping through all variables
+for (i in predictors_bos) {
+  formula <- as.formula(paste("crim ~", i))
+  model <- lm(formula, data=Boston)
+  model_summary <- summary(model)
+  
+  #Extract estimates
+  coef <- model_summary$coefficients[2, 1]
+  pval <- model_summary$coefficients[2, 4]
+  r2 <- model_summary$r.squared             
+  
+  #Store the results in lists
+  coef_l <- c(coef_l, coef)
+  pval_l <- c(pval_l, pval)
+  r2_l <- c(r2_l, r2)
+}
+
+#Create dataframe
+summary_tab <- data.frame(
+  Predictor = predictors_bos,
+  Coefficient = coef_l,
+  P_value = pval_l,
+  R_squared = r2_l
+)
+
+# Display the table
+summary_tab
+```
+
+From the integrated result summary table, we can observe that variables 'rad' and 'tax' have the most significant effect on the response variable, criminal rate per Capita. \
+
+```{r multiple linear regression model fit}
+# (b) multiple linear regression model fit
+model_fit_multi_bos <- lm(crim ~ . , data = Boston)
+summary(model_fit_multi_bos)
+```
+
+From the multiple linear regression result, it can be observed that variables 'dis' and 'rad' are the two most significant variables compared to the rest, with some of them have no significant effects on the response.
