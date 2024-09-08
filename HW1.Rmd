@@ -23,9 +23,25 @@ Therefore, the point $(\bar{x}, \bar{y})$ must be on the least-square line.
 
 **Question 3 (3.7-9)**
 
-```{r auto}
+```{r auto scatterplot}
+# (a) Scatterplot Matrix
 # install.packages("ISLR")
 library(ISLR)
 data(Auto)
 plot(Auto, cex = 0.4, col = "lightblue")
 ```
+
+```{r correlation}
+# (b) correlation matrix
+cor(Auto[, 1:8]) # Excluded the first variable 'name'
+```
+
+```{r multiple linear regression}
+# (c) multiple linear regression
+car_lm_fit <- lm(mpg ~ . - name, data = Auto)
+summary(car_lm_fit)
+```
+
+(i) From the result, we see a significant *p*-value and a sufficiently large F statistics for the overall model fit, which suggests that there exist a linear relationship between mpg and other predictors.
+
+(ii)
