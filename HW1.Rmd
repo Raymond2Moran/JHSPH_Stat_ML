@@ -1,7 +1,7 @@
 ---
 title: "HW1_Statistical Machine Learning"
 author: "Moran Guo"
-date: "2024-08-27"
+date: "2024-09-08"
 output:
   pdf_document: default
   html_document: default
@@ -125,12 +125,82 @@ summary_tab <- data.frame(
 summary_tab
 ```
 
-From the integrated result summary table, we can observe that variables 'rad' and 'tax' have the most significant effect on the response variable, criminal rate per Capita. \
+From the integrated result summary table, we can observe that variables 'rad' and 'tax' have the most significant effect on the response variable, criminal rate per Capita.\
 
 ```{r multiple linear regression model fit}
 # (b) multiple linear regression model fit
+
 model_fit_multi_bos <- lm(crim ~ . , data = Boston)
 summary(model_fit_multi_bos)
 ```
 
 From the multiple linear regression result, it can be observed that variables 'dis' and 'rad' are the two most significant variables compared to the rest, with some of them have no significant effects on the response.
+
+```{r compare coeffs}
+# (c) Compare coefficients of two models
+
+plot(summary_tab$Coefficient, model_fit_multi_bos$coefficients[-1], xlab = "Simple Linear Regression Coefficients", ylab = "Multiple Linear Regression Coefficients")
+```
+
+From the result we can see that the coefficient of variable 'nox' changed from around 31 in the simple linear regression model to around -10 in the multiple linear regression model. The coefficients of other variables also changed, but not as much as 'nox'.
+
+```{r non-linear association}
+# (d) test for non-linear association
+
+predictors_compare_bos <- names(Boston)[names(Boston) != "crim"]
+
+predictor_names <- c()
+f_stats <- c()
+p_value <- c()
+
+for (i in predictors_compare_bos) {
+  #Fit a simple linear model
+  linear_model <- lm(as.formula(paste("crim ~", i)), data = Boston)
+  #Fit a model with quadratic & cubic terms
+  nonlinear_model <- lm(as.formula(paste("crim ~", i, "+ I(", i, "^2)", "+ I(", i, "^3)")),
+  data = Boston)
+  #Use ANOVA to compare the two models
+  anova_result <- anova(linear_model, nonlinear_model)
+  #Extract statistics
+  f_stats_temp <- anova_result$F[2]
+  p_value_temp <- anova_result$`Pr(>F)`[2]
+  
+  predictor_names <- c(predictor_names, i)
+  f_stats <- c(f_stats, f_stats_temp)
+  p_value <- c(p_value, p_value_temp)
+  
+}
+
+#Create a data frame to store the results
+comparison_tab <- data.frame(
+  Predictors = predictor_names,
+  F_statistics = f_stats,
+  P_value = p_value
+)
+
+comparison_tab[order(comparison_tab$P_value), ]
+```
+
+To compare the results between a simple linear regression model and a third order model suggested by the question, we fit the two models separately and use ANOVA test to see if the third order fit is sufficiently larger than the model we get from a simple linear regression.
+
+From the results, we can see that variables 'medv', 'dis', 'nox', 'indus', 'age', 'tax', 'ptratio', etc., have significant *P* values which suggests a significant non-linear relationship.
+
+**Question 5 (4.7-1)**
+
+We work from **Eq. (4.3)** back to **Eq. (4.2)** to show that they are equivalent:
+
+$$
+\frac{p(X)}{1 - p(X)} = e^{\beta_0 + \beta_1X} \Rightarrow p(X) = e^{\beta_0 + \beta_1X}(1 - p(X)) \Rightarrow p(X)(1 + e^{\beta_0 + \beta_1X}) = e^{\beta_0 + \beta_1X} \Rightarrow p(X) = \frac{e^{\beta_0 + \beta_1X}}{1+e^{\beta_0 + \beta_1X}}.
+$$
+
+**Question 6 (4.7-8)**
+
+Note that for the KNN with $N = 1$, it will have a zero error rate for the training data set. So we must have $$\frac{0 + \text{ test error rate}}{2} = 0.18 \Rightarrow \text{ test error rate} = 0.36. $$
+
+We have the information that logistic regression achieves a test error rate of $0.30$, so we would prefer logistic regression because of small error rate.
+
+**Question 7 (4.7-10)**
+
+```{r summary}
+summary(Weekly)
+```
