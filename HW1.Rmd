@@ -3,8 +3,8 @@ title: "HW1_Statistical Machine Learning"
 author: "Moran Guo"
 date: "2024-09-08"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -37,7 +37,7 @@ plot(Auto, cex = 0.4, col = "lightblue")
 
 ```{r correlation}
 # (b) correlation matrix
-cor(Auto[, 1:8]) # Excluded the first variable 'name'
+cor(Auto[, 1:8]) # Excluded the first variable `name`
 ```
 
 **(c)**
@@ -48,11 +48,11 @@ car_lm_fit <- lm(mpg ~ . - name, data = Auto)
 summary(car_lm_fit)
 ```
 
-(i) From the result, we see a significant *p*-value and a sufficiently large F statistics for the overall model fit, which suggests that there exist a linear relationship between mpg and other predictors.
+<mark> (i) From the result, we see a significant *p*-value and a sufficiently large F statistics for the overall model fit, which suggests that there exist a linear relationship between mpg and other predictors.
 
-(ii) From the above linear model fit summary, we see variables 'weight', 'year', and 'origin' are the most significant predictors.
+<mark> (ii) From the above linear model fit summary, we see variables `weight`, `year`, and `origin` are the most significant predictors.
 
-(iii) The coefficient of 'year' is statistical significant and positive, which suggests that year is positively associated with the outcome variable mpg. This implies that as time goes by, the car manufacturers improved cars' mpg, possibly by innovating new technology.
+<mark> (iii) The coefficient of `year` is statistical significant and positive, which suggests that year is positively associated with the outcome variable mpg. This implies that as time goes by, the car manufacturers improved cars' mpg, possibly by innovating new technology.
 
 **(d)**
 
@@ -61,7 +61,7 @@ summary(car_lm_fit)
 plot(car_lm_fit)
 ```
 
-From the diagnostic plots (especially the Residuals vs. Leverage plot), we can see that observation 327, 394 seems to have a large residuals compared to the rest, which suggests that they are potentially outliers. Observation 14 has a large leverage value so that it is a point of large impact.
+<mark> From the diagnostic plots (especially the Residuals vs. Leverage plot), we can see that observation 327, 394 seems to have a large residuals compared to the rest, which suggests that they are potentially outliers. Observation 14 has a large leverage value so that it is a point of large impact.
 
 **(e)**
 
@@ -71,11 +71,11 @@ summary(update(car_lm_fit, . ~ . + horsepower:acceleration))
 summary(update(car_lm_fit, . ~ . + horsepower:weight))
 ```
 
-Intuitively, we might think that the interactions between horsepower & acceleration **and** horsepower & car weight may have significant influence on car's mpg.
+<mark> Intuitively, we might think that the interactions between horsepower & acceleration **and** horsepower & car weight may have significant influence on car's mpg.
 
-From the result of linear model fit with added interaction terms, we can see that as acceleration increases, the effect of horsepower on car's mpg becomes negative with statistical significance. Cars with higher acceleration and higher horsepower will tend to have even lower mpg than would be expected from each of these two variables individually.
+<mark> From the result of linear model fit with added interaction terms, we can see that as acceleration increases, the effect of horsepower on car's mpg becomes negative with statistical significance. Cars with higher acceleration and higher horsepower will tend to have even lower mpg than would be expected from each of these two variables individually.
 
-For the interactions between horsepower and car weight, we see a significantly positive effect, whereas car weight & horsepower on their own have negative effects on car mpg. This suggests that as weight increases, the negative effect of horsepower on car's mpg is moderated. Or in other words, the drop of fuel efficiency of high horsepower car is less severe for high weight cars compared to lighter cars.
+<mark> For the interactions between horsepower and car weight, we see a significantly positive effect, whereas car weight & horsepower on their own have negative effects on car mpg. This suggests that as weight increases, the negative effect of horsepower on car's mpg is moderated. Or in other words, the drop of fuel efficiency of high horsepower car is less severe for high weight cars compared to lighter cars.
 
 **(f)**
 
@@ -93,7 +93,7 @@ car_lm_fit_sq_hp <- lm (mpg ~ . + I((horsepower)^2) - name, data = Auto)
 summary(car_lm_fit_sq_hp)
 ```
 
-From the model fit results, we can see that both the natural log and the quadratic transform of variable 'horsepower' showed significant effects. We can also observe from the F-statistics that the model improved with the addition of transformed variables. So we would expect that horsepower has a non-linear relationship with mpg, which is the reason that adding transformed variables improves the overall model.
+<mark> From the model fit results, we can see that both the natural log and the quadratic transform of variable `horsepower` showed significant effects. We can also observe from the F-statistics that the model improved with the addition of transformed variables. So we would expect that horsepower has a non-linear relationship with mpg, which is the reason that adding transformed variables improves the overall model.
 
 **Question 4 (3.7-15)**
 
@@ -101,9 +101,10 @@ From the model fit results, we can see that both the natural log and the quadrat
 
 ```{r model fit}
 # (a) simple regression model fit
+
 #install.packages("MASS")
 library(MASS)
-predictors_bos <- names(Boston)[names(Boston) != "crim"] # Exclude response variable 'crim'
+predictors_bos <- names(Boston)[names(Boston) != "crim"] # Exclude response variable `crim`
 
 #Empty lists to store statistics
 coef_l <- c()
@@ -139,7 +140,7 @@ summary_tab <- data.frame(
 summary_tab
 ```
 
-From the integrated result summary table, we can observe that variables 'rad' and 'tax' have the most significant effect on the response variable, criminal rate per Capita.\
+<mark> From the integrated result summary table, we can observe that variables `rad` and `tax` have the most significant effect on the response variable, criminal rate per Capita.
 
 **(b)**
 
@@ -150,7 +151,7 @@ model_fit_multi_bos <- lm(crim ~ . , data = Boston)
 summary(model_fit_multi_bos)
 ```
 
-From the multiple linear regression result, it can be observed that variables 'dis' and 'rad' are the two most significant variables compared to the rest, with some of them have no significant effects on the response.
+<mark> From the multiple linear regression result, it can be observed that variables `dis` and `rad` are the two most significant variables compared to the rest, with some of them have no significant effects on the response.
 
 **(c)**
 
@@ -160,7 +161,7 @@ From the multiple linear regression result, it can be observed that variables 'd
 plot(summary_tab$Coefficient, model_fit_multi_bos$coefficients[-1], xlab = "Simple Linear Regression Coefficients", ylab = "Multiple Linear Regression Coefficients")
 ```
 
-From the result we can see that the coefficient of variable 'nox' changed from around 31 in the simple linear regression model to around -10 in the multiple linear regression model. The coefficients of other variables also changed, but not as much as 'nox'.
+<mark> From the result we can see that the coefficient of variable `nox` changed from around 31 in the simple linear regression model to around -10 in the multiple linear regression model. The coefficients of other variables also changed, but not as much as `nox`.
 
 **(d)**
 
@@ -201,13 +202,13 @@ comparison_tab <- data.frame(
 comparison_tab[order(comparison_tab$P_value), ]
 ```
 
-To compare the results between a simple linear regression model and a third order model suggested by the question, we fit the two models separately and use ANOVA test to see if the third order fit is sufficiently larger than the model we get from a simple linear regression.
+<mark> To compare the results between a simple linear regression model and a third order model suggested by the question, we fit the two models separately and use ANOVA test to see if the third order fit is sufficiently larger than the model we get from a simple linear regression.
 
-From the results, we can see that variables 'medv', 'dis', 'nox', 'indus', 'age', 'tax', 'ptratio', etc., have significant *P* values which suggests a significant non-linear relationship.
+<mark> From the results, we can see that variables `medv`, `dis`, `nox`, `indus`, `age`, `tax`, `ptratio`, etc., have significant *p*-values which suggests a significant non-linear relationship.
 
 **Question 5 (4.7-1)**
 
-We work from **Eq. (4.3)** back to **Eq. (4.2)** to show that they are equivalent:
+<mark> We work from **Eq. (4.3)** back to **Eq. (4.2)** to show that they are equivalent:
 
 $$
 \frac{p(X)}{1 - p(X)} = e^{\beta_0 + \beta_1X} \Rightarrow p(X) = e^{\beta_0 + \beta_1X}(1 - p(X)) \Rightarrow p(X)(1 + e^{\beta_0 + \beta_1X}) = e^{\beta_0 + \beta_1X} \Rightarrow p(X) = \frac{e^{\beta_0 + \beta_1X}}{1+e^{\beta_0 + \beta_1X}}.
@@ -215,9 +216,9 @@ $$
 
 **Question 6 (4.7-8)**
 
-Note that for the KNN with $N = 1$, it will have a zero error rate for the training data set. So we must have $$\frac{0 + \text{ test error rate}}{2} = 0.18 \Rightarrow \text{ test error rate} = 0.36. $$
+<mark> Note that for the KNN with $N = 1$, it will have a zero error rate for the training data set. So we must have $$\frac{0 + \text{ test error rate}}{2} = 0.18 \Rightarrow \text{ test error rate} = 0.36. $$
 
-We have the information that logistic regression achieves a test error rate of $0.30$, so we would prefer logistic regression because of small error rate.
+<mark> We have the information that logistic regression achieves a test error rate of $0.30$, so we would prefer logistic regression because of small error rate.
 
 **Question 7 (4.7-10)**
 
@@ -230,7 +231,7 @@ summary(Weekly)
 plot(Weekly, cex = 0.3, col = "lightblue")
 ```
 
-From the summary table and the plot, we can observe a relative balance distribution for all variables excluding `Year` and `Volume`, with mean values clustered around 0. The plot shows that there seems to be an exponential relationship between variable `Year` and `Volume`.
+<mark> From the summary table and the plot, we can observe a relative balance distribution for all variables excluding `Year` and `Volume`, with mean values clustered around 0. The plot shows that there seems to be an exponential relationship between variable `Year` and `Volume`.
 
 **(b)**
 
@@ -240,7 +241,7 @@ weekly_lreg_fit <- glm(Direction ~ . - Today, data = Weekly, family = binomial)
 summary(weekly_lreg_fit)
 ```
 
-From the result of logistic regression, only variable `Lag2` is statistically significant.
+<mark> From the result of logistic regression, only variable `Lag2` is statistically significant.
 
 **(c)**
 
@@ -256,7 +257,7 @@ glm_pred[pred_probs > 0.5] <- "Up"
 table(glm_pred, Weekly$Direction)
 ```
 
-From the table it seems that the model is predicting Up more frequently than predicting Down. So we could argue that this model tends to predict the market was up during this period of time. Another noticeable fact is that the overall correct classification rate is $\frac{56+558}{56+558+47+428} \approx 0.564$, which suggests a training error rate of $0.436$, which is pretty high considering that the training error is often-time overly optimistic.
+<mark> From the table it seems that the model is predicting Up more frequently than predicting Down. So we could argue that this model tends to predict the market was up during this period of time. Another noticeable fact is that the overall correct classification rate is $\frac{56+558}{56+558+47+428} \approx 0.564$, which suggests a training error rate of $0.436$, which is pretty high considering that the training error is often-time overly optimistic.
 
 **(d)**
 
@@ -380,10 +381,119 @@ To improve the model, I tried two strategies:
 **(a)**
 
 ```{r auto01}
-# (a) create variable
+# (a) Create variable
 
 library(ISLR)
 Auto$mpg01 <- ifelse(Auto$mpg > median(Auto$mpg), 1, 0)
 ```
 
 **(b)**
+
+```{r correlation MPG}
+# (b) Examine correlation
+
+cor_mpg <- cor(Auto[, 1:8])[-1, 1]
+cor_mpg
+```
+
+From the result, it seems that weight, displacement, cylinders, and horsepower have a strong negative correlation with cars' mpg; while car's year & origin have a moderate positive correlation. The former is kind of self-explanatory, and we could explain the latter by the advancement of technology in car manufacturing.
+
+**(c)**
+
+```{r split}
+# (c) Split data
+
+set.seed(817) #Set seed for reproducibility
+
+n <- nrow(Auto)
+
+indices <- sample(1:n)
+
+train_size <- round(0.8 * n) #A 80/20 split
+
+train_ind <- indices[1:train_size]
+test_ind <- indices[(train_size + 1):n]
+
+train_data <- Auto[train_ind, c(-1, -9)]
+test_data <- Auto[test_ind, c(-1, -9)]
+```
+
+**(d)**
+
+```{r LDA MPG}
+# (d) LDA model fit
+
+library(MASS)
+
+mpg01_lda_fit <- lda(mpg01 ~ . - acceleration, data = train_data)
+lda_predictions <- predict(mpg01_lda_fit, newdata = test_data, type = "response")
+
+predicted_classes <- lda_predictions$class
+actual_classes <- test_data$mpg01
+
+lda_test_error <- mean(predicted_classes != actual_classes)
+
+print(paste("Test Error: ", round(lda_test_error, 4)))
+```
+
+Therefore, the error rate on test set is 0.1282.
+
+**(e)**
+
+```{r QDA MPG}
+# (d) QDA model fit
+
+library(MASS)
+
+mpg01_qda_fit <- qda(mpg01 ~ . - acceleration, data = train_data)
+qda_predictions <- predict(mpg01_qda_fit, newdata = test_data, type = "response")
+
+predicted_classes <- qda_predictions$class
+actual_classes <- test_data$mpg01
+
+qda_test_error <- mean(predicted_classes != actual_classes)
+
+print(paste("Test Error: ", round(qda_test_error, 4)))
+```
+
+The error rate of QDA on test set is 0.1026.
+
+**(f)**
+
+```{r Logistic MPG}
+
+library(MASS)
+
+mpg01_lreg_fit <- glm(mpg01 ~ . - acceleration, data = train_data, family = binomial)
+
+lreg_pred <- ifelse(predict(mpg01_lreg_fit, test_data, type = "response") > 0.5, 1, 0)
+
+actual_classes <- test_data$mpg01
+
+lreg_test_error <- mean(lreg_pred != actual_classes)
+
+print(paste("Test Error: ", round(lreg_test_error, 4)))
+```
+
+The error rate of logistic regression on test set is 0.1410.
+
+**(g)**
+
+```{r KNN MPG}
+# (g) KNN model fit and output the best k
+
+library(class)
+set.seed(123)
+result <- data.frame(k = 1:10, error = "") #Initialize dataframe
+
+for (k in 1:10) {
+  mpg_knn_pred <- knn(train = train_data[, c(-5, -6, -7, -8)],
+                      test = test_data[, c(-5, -6, -7, -8)], 
+                      cl = train_data$mpg01, k = k)
+  result[k, 2] <- mean(mpg_knn_pred != test_data$mpg01)
+}
+
+result
+```
+
+Based on the result, $K = 3, 4, 6, 8$ yields the same lowest error rate. So a valid answer will be $K = 3$.
