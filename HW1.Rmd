@@ -23,6 +23,8 @@ Therefore, the point $(\bar{x}, \bar{y})$ must be on the least-square line.
 
 **Question 3 (3.7-9)**
 
+**(a)**
+
 ```{r auto scatterplot}
 # (a) Scatterplot Matrix
 # install.packages("ISLR")
@@ -31,10 +33,14 @@ data(Auto)
 plot(Auto, cex = 0.4, col = "lightblue")
 ```
 
+**(b)**
+
 ```{r correlation}
 # (b) correlation matrix
 cor(Auto[, 1:8]) # Excluded the first variable 'name'
 ```
+
+**(c)**
 
 ```{r multiple linear regression}
 # (c) multiple linear regression
@@ -48,12 +54,16 @@ summary(car_lm_fit)
 
 (iii) The coefficient of 'year' is statistical significant and positive, which suggests that year is positively associated with the outcome variable mpg. This implies that as time goes by, the car manufacturers improved cars' mpg, possibly by innovating new technology.
 
+**(d)**
+
 ```{r diagnostic plot}
 # (d) diagnostic plots
 plot(car_lm_fit)
 ```
 
 From the diagnostic plots (especially the Residuals vs. Leverage plot), we can see that observation 327, 394 seems to have a large residuals compared to the rest, which suggests that they are potentially outliers. Observation 14 has a large leverage value so that it is a point of large impact.
+
+**(e)**
 
 ```{r update model with interactions}
 # (e) linear regression w/ interaction effects
@@ -66,6 +76,8 @@ Intuitively, we might think that the interactions between horsepower & accelerat
 From the result of linear model fit with added interaction terms, we can see that as acceleration increases, the effect of horsepower on car's mpg becomes negative with statistical significance. Cars with higher acceleration and higher horsepower will tend to have even lower mpg than would be expected from each of these two variables individually.
 
 For the interactions between horsepower and car weight, we see a significantly positive effect, whereas car weight & horsepower on their own have negative effects on car mpg. This suggests that as weight increases, the negative effect of horsepower on car's mpg is moderated. Or in other words, the drop of fuel efficiency of high horsepower car is less severe for high weight cars compared to lighter cars.
+
+**(f)**
 
 ```{r different transformations}
 # (f) different transformation of variables
@@ -84,6 +96,8 @@ summary(car_lm_fit_sq_hp)
 From the model fit results, we can see that both the natural log and the quadratic transform of variable 'horsepower' showed significant effects. We can also observe from the F-statistics that the model improved with the addition of transformed variables. So we would expect that horsepower has a non-linear relationship with mpg, which is the reason that adding transformed variables improves the overall model.
 
 **Question 4 (3.7-15)**
+
+**(a)**
 
 ```{r model fit}
 # (a) simple regression model fit
@@ -127,6 +141,8 @@ summary_tab
 
 From the integrated result summary table, we can observe that variables 'rad' and 'tax' have the most significant effect on the response variable, criminal rate per Capita.\
 
+**(b)**
+
 ```{r multiple linear regression model fit}
 # (b) multiple linear regression model fit
 
@@ -136,6 +152,8 @@ summary(model_fit_multi_bos)
 
 From the multiple linear regression result, it can be observed that variables 'dis' and 'rad' are the two most significant variables compared to the rest, with some of them have no significant effects on the response.
 
+**(c)**
+
 ```{r compare coeffs}
 # (c) Compare coefficients of two models
 
@@ -143,6 +161,8 @@ plot(summary_tab$Coefficient, model_fit_multi_bos$coefficients[-1], xlab = "Simp
 ```
 
 From the result we can see that the coefficient of variable 'nox' changed from around 31 in the simple linear regression model to around -10 in the multiple linear regression model. The coefficients of other variables also changed, but not as much as 'nox'.
+
+**(d)**
 
 ```{r non-linear association}
 # (d) test for non-linear association
@@ -201,6 +221,169 @@ We have the information that logistic regression achieves a test error rate of $
 
 **Question 7 (4.7-10)**
 
+**(a)**
+
 ```{r summary}
+# (a) Summary and plots
+library(MASS)
 summary(Weekly)
+plot(Weekly, cex = 0.3, col = "lightblue")
 ```
+
+From the summary table and the plot, we can observe a relative balance distribution for all variables excluding `Year` and `Volume`, with mean values clustered around 0. The plot shows that there seems to be an exponential relationship between variable `Year` and `Volume`.
+
+**(b)**
+
+```{r logistic regression}
+# (b) Logistic regression
+weekly_lreg_fit <- glm(Direction ~ . - Today, data = Weekly, family = binomial)
+summary(weekly_lreg_fit)
+```
+
+From the result of logistic regression, only variable `Lag2` is statistically significant.
+
+**(c)**
+
+```{r confusion matrix}
+# (c) Construct confusion matrix
+
+#Predict the outcomes based on predictors
+pred_probs <- predict(weekly_lreg_fit, type = "response")
+glm_pred <- rep("Down", length(pred_probs))
+glm_pred[pred_probs > 0.5] <- "Up"
+
+#Confusion matrix
+table(glm_pred, Weekly$Direction)
+```
+
+From the table it seems that the model is predicting Up more frequently than predicting Down. So we could argue that this model tends to predict the market was up during this period of time. Another noticeable fact is that the overall correct classification rate is $\frac{56+558}{56+558+47+428} \approx 0.564$, which suggests a training error rate of $0.436$, which is pretty high considering that the training error is often-time overly optimistic.
+
+**(d)**
+
+```{r logistic regression lag2}
+library(MASS)
+# (d) Logistic regression using Lag2
+
+#Specify test and train sets
+test_set <- Weekly[Weekly$Year > 2008, ]
+train_set <- Weekly[Weekly$Year <= 2008, ]
+
+lag2_lreg_fit <- glm(Direction ~ Lag2, family = binomial, data = train_set)
+
+lag_2_pred_probs <- predict(lag2_lreg_fit, newdata = test_set, type = "response")
+
+lag_2_preds <- rep("Down", length(lag_2_pred_probs))
+
+lag_2_preds[lag_2_pred_probs > 0.5] <- "Up"
+
+table(lag_2_preds, test_set$Direction)
+```
+
+We can calculate the overall fraction of correct prediction is $\frac{9+56}{9+56+34+5} = 0.625$, improved from the previous model.
+
+**(e)**
+
+```{r LDA}
+# (e) LDA model
+
+lag_2_lda_fit <- lda(Direction ~ Lag2, data = train_set)
+lag_2_lda_pred <- predict(lag_2_lda_fit, newdata = test_set, type = "response")$class
+table(lag_2_lda_pred, test_set$Direction)
+```
+
+Similarly, we can calculate the overall correct prediction rate: $\frac{9+56}{9+56+34+5} = 0.625$.
+
+**(f)**
+
+```{r QDA}
+# (f) QDA model
+
+lag_2_qda_fit <- qda(Direction ~ Lag2, data = train_set)
+lag_2_qda_pred <- predict(lag_2_qda_fit, newdata = test_set, type = "response")$class
+table(lag_2_qda_pred, test_set$Direction)
+```
+
+The overall fraction of correct prediction is: $\frac{61}{61+43} = 0.587$.
+
+**(g)**
+
+```{r KNN}
+# (g) KNN model with K = 1
+
+library(class)
+train_set_KNN <- cbind(train_set$Lag2)
+test_set_KNN <- cbind(test_set$Lag2)
+train_response_KNN <- train_set$Direction
+
+pred_probs_KNN <- knn(train_set_KNN, test_set_KNN, train_response_KNN) #Default value is k=1
+
+table(pred_probs_KNN, test_set$Direction)
+```
+
+The overall fraction of correct prediction for KNN with $K=1$ is $\frac{21+31}{21+31+30+22} = 0.50$.
+
+**(h)**
+
+Among the models tested above, logistic regression and LDA performed the best based on the overall correct prediction rates.
+
+**(i)**
+
+We try to vary the value of $K$ in the KNN model to see if the accuracy improves.
+
+```{r modify model KNN}
+# (i) Modify KNN's K values
+
+#Define a range of K values to test
+k_values <- c(3, 5, 7, 9)
+
+for (k in k_values) {
+  pred_probs_KNN <- knn(train_set_KNN, test_set_KNN, train_response_KNN, k = k)
+  confusion_matrix <- table(pred_probs_KNN, test_set$Direction)
+  
+  cat("\nK =", k, "\n")
+  print(confusion_matrix)
+  
+  accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+  cat("Accuracy for K =", k, ":", accuracy, "\n")
+}
+
+```
+
+```{r modify variables}
+#We use only the first three lags to see if we can improve the accuracy
+train_set_KNN <- cbind(train_set$Lag1, train_set$Lag2, train_set$Lag3)
+test_set_KNN <- cbind(test_set$Lag1, test_set$Lag2, test_set$Lag3)
+
+train_response_KNN <- train_set$Direction
+
+k_values <- c(1, 3, 5, 7, 9)
+
+for (k in k_values) {
+  pred_probs_KNN <- knn(train_set_KNN, test_set_KNN, train_response_KNN, k = k)
+  confusion_matrix <- table(pred_probs_KNN, test_set$Direction)
+  
+  cat("\nK =", k, "\n")
+  print(confusion_matrix)
+  
+  accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+  cat("Accuracy for K =", k, ":", accuracy, "\n")
+}
+```
+
+To improve the model, I tried two strategies:
+
+1.  Increase the value of $K$ in the KNN model. The result indicates that if we use all variables as predictors, $K = 3$ and $K = 9$ achieved the same accuracy around $0.548$.
+2.  Use only the first three lags `Lag1`, `Lag2`, and `Lag3` to predict the results. The KNN model was constructed based on modified data frame and varied $K$'s. From the result, we can see that $K = 7$ in this setting performed the best.
+
+**Question 8 (4.7-11)**
+
+**(a)**
+
+```{r auto01}
+# (a) create variable
+
+library(ISLR)
+Auto$mpg01 <- ifelse(Auto$mpg > median(Auto$mpg), 1, 0)
+```
+
+**(b)**
