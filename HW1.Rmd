@@ -26,7 +26,7 @@ Therefore, the point $(\bar{x}, \bar{y})$ must be on the least-square line.
 **(a)**
 
 ```{r auto scatterplot}
-# (a) Scatterplot Matrix
+# (a) Scatter Plot Matrix
 # install.packages("ISLR")
 library(ISLR)
 data(Auto)
@@ -140,7 +140,44 @@ summary_tab <- data.frame(
 summary_tab
 ```
 
-<mark> From the integrated result summary table, we can observe that variables `rad` and `tax` have the most significant effect on the response variable, criminal rate per Capita.
+```{r backup plots}
+par(mfrow = c(2, 2))  #Display 4 plots at once (2x2 grid)
+
+for (i in predictors_bos) {
+  formula <- as.formula(paste("crim ~", i))
+  model <- lm(formula, data = Boston)
+  
+  #Create scatter plot with regression line
+  plot(Boston[[i]], Boston$crim, 
+       xlab = i, 
+       ylab = "crim", 
+       main = paste("crim vs", i), 
+       pch = 19, 
+       col = "lightblue")
+  
+  # Add regression line
+  abline(model, col = "red", lwd = 2)
+}
+
+
+
+#Reset plotting area
+par(mfrow = c(1, 1))  
+
+#Log-transform the p-values
+summary_tab$log_P_value <- -log10(summary_tab$P_value)
+
+
+barplot(summary_tab$log_P_value,
+        names.arg = summary_tab$Predictor,
+        col = "lightblue",
+        las = 2,
+        main = "-log10(P-values) for Predictors",
+        ylab = "-log10(P-value)",
+        ylim = c(0, max(summary_tab$log_P_value) + 1))
+```
+
+<mark> From the integrated result summary table as well as the scatter plot AND the log-transformed *p*-value bar plots, we can observe that variables `rad` and `tax` have the most significant effect on the response variable, criminal rate per Capita.
 
 **(b)**
 
@@ -280,7 +317,7 @@ lag_2_preds[lag_2_pred_probs > 0.5] <- "Up"
 table(lag_2_preds, test_set$Direction)
 ```
 
-We can calculate the overall fraction of correct prediction is $\frac{9+56}{9+56+34+5} = 0.625$, improved from the previous model.
+<mark> We can calculate the overall fraction of correct prediction is $\frac{9+56}{9+56+34+5} = 0.625$, improved from the previous model.
 
 **(e)**
 
@@ -292,7 +329,7 @@ lag_2_lda_pred <- predict(lag_2_lda_fit, newdata = test_set, type = "response")$
 table(lag_2_lda_pred, test_set$Direction)
 ```
 
-Similarly, we can calculate the overall correct prediction rate: $\frac{9+56}{9+56+34+5} = 0.625$.
+<mark> Similarly, we can calculate the overall correct prediction rate: $\frac{9+56}{9+56+34+5} = 0.625$.
 
 **(f)**
 
@@ -321,15 +358,15 @@ pred_probs_KNN <- knn(train_set_KNN, test_set_KNN, train_response_KNN) #Default 
 table(pred_probs_KNN, test_set$Direction)
 ```
 
-The overall fraction of correct prediction for KNN with $K=1$ is $\frac{21+31}{21+31+30+22} = 0.50$.
+<mark> The overall fraction of correct prediction for KNN with $K=1$ is $\frac{21+31}{21+31+30+22} = 0.50$.
 
 **(h)**
 
-Among the models tested above, logistic regression and LDA performed the best based on the overall correct prediction rates.
+<mark> Among the models tested above, logistic regression and LDA performed the best based on the overall correct prediction rates.
 
 **(i)**
 
-We try to vary the value of $K$ in the KNN model to see if the accuracy improves.
+<mark> We try to vary the value of $K$ in the KNN model to see if the accuracy improves.
 
 ```{r modify model KNN}
 # (i) Modify KNN's K values
@@ -371,10 +408,10 @@ for (k in k_values) {
 }
 ```
 
-To improve the model, I tried two strategies:
+<mark> To improve the model, I tried two strategies:
 
-1.  Increase the value of $K$ in the KNN model. The result indicates that if we use all variables as predictors, $K = 3$ and $K = 9$ achieved the same accuracy around $0.548$.
-2.  Use only the first three lags `Lag1`, `Lag2`, and `Lag3` to predict the results. The KNN model was constructed based on modified data frame and varied $K$'s. From the result, we can see that $K = 7$ in this setting performed the best.
+1.  <mark> Increase the value of $K$ in the KNN model. The result indicates that if we use all variables as predictors, $K = 3$ and $K = 9$ achieved the same accuracy around $0.548$.
+2.  <mark> Use only the first three lags `Lag1`, `Lag2`, and `Lag3` to predict the results. The KNN model was constructed based on modified data frame and varied $K$'s. From the result, we can see that $K = 7$ in this setting performed the best.
 
 **Question 8 (4.7-11)**
 
@@ -396,7 +433,7 @@ cor_mpg <- cor(Auto[, 1:8])[-1, 1]
 cor_mpg
 ```
 
-From the result, it seems that weight, displacement, cylinders, and horsepower have a strong negative correlation with cars' mpg; while car's year & origin have a moderate positive correlation. The former is kind of self-explanatory, and we could explain the latter by the advancement of technology in car manufacturing.
+<mark> From the result, it seems that weight, displacement, cylinders, and horsepower have a strong negative correlation with cars' mpg; while car's year & origin have a moderate positive correlation. The former is kind of self-explanatory, and we could explain the latter by the advancement of technology in car manufacturing.
 
 **(c)**
 
@@ -436,7 +473,7 @@ lda_test_error <- mean(predicted_classes != actual_classes)
 print(paste("Test Error: ", round(lda_test_error, 4)))
 ```
 
-Therefore, the error rate on test set is 0.1282.
+<mark> Therefore, the error rate on test set is 0.1282.
 
 **(e)**
 
@@ -456,7 +493,7 @@ qda_test_error <- mean(predicted_classes != actual_classes)
 print(paste("Test Error: ", round(qda_test_error, 4)))
 ```
 
-The error rate of QDA on test set is 0.1026.
+<mark> The error rate of QDA on test set is 0.1026.
 
 **(f)**
 
@@ -475,7 +512,7 @@ lreg_test_error <- mean(lreg_pred != actual_classes)
 print(paste("Test Error: ", round(lreg_test_error, 4)))
 ```
 
-The error rate of logistic regression on test set is 0.1410.
+<mark> The error rate of logistic regression on test set is 0.1410.
 
 **(g)**
 
@@ -496,4 +533,4 @@ for (k in 1:10) {
 result
 ```
 
-Based on the result, $K = 3, 4, 6, 8$ yields the same lowest error rate. So a valid answer will be $K = 3$.
+<mark> Based on the result, $K = 3, 4, 6, 8$ yields the same lowest error rate. So a valid answer will be $K = 3$.
