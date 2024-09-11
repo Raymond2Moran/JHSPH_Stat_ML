@@ -1,7 +1,7 @@
 ---
 title: "HW1_Statistical Machine Learning"
 author: "Moran Guo"
-date: "2024-09-08"
+date: "2024-09-11"
 output:
   html_document: default
   pdf_document: default
@@ -428,12 +428,17 @@ Auto$mpg01 <- ifelse(Auto$mpg > median(Auto$mpg), 1, 0)
 
 ```{r correlation MPG}
 # (b) Examine correlation
+plot(Auto, cex = 0.4, col = "lightblue")
 
-cor_mpg <- cor(Auto[, 1:8])[-1, 1]
-cor_mpg
+
+cor_mpg01 <- cor(Auto[, c(1:8, 10)])[-9, 9] 
+# Exclude the `name` variable, extract the correlation values with respect to `mpg01`
+
+# Display the result
+cor_mpg01
 ```
 
-<mark> From the result, it seems that weight, displacement, cylinders, and horsepower have a strong negative correlation with cars' mpg; while car's year & origin have a moderate positive correlation. The former is kind of self-explanatory, and we could explain the latter by the advancement of technology in car manufacturing.
+<mark> From the result, it seems that weight, displacement, cylinders, and horsepower have a moderately strong negative correlation with cars' mpg (based on `mpg01`); while car's `year` & `origin` have a moderate positive correlation. The former is kind of self-explanatory, and we could explain the latter by the advancement of technology in car manufacturing.
 
 **(c)**
 
