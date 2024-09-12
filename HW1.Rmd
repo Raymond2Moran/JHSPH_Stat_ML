@@ -182,7 +182,7 @@ barplot(summary_tab$log_P_value,
 **(b)**
 
 ```{r multiple linear regression model fit}
-# (b) multiple linear regression model fit
+# (b) Multiple linear regression model fit
 
 model_fit_multi_bos <- lm(crim ~ . , data = Boston)
 summary(model_fit_multi_bos)
@@ -203,7 +203,7 @@ plot(summary_tab$Coefficient, model_fit_multi_bos$coefficients[-1], xlab = "Simp
 **(d)**
 
 ```{r non-linear association}
-# (d) test for non-linear association
+# (d) Test for non-linear association
 
 predictors_compare_bos <- names(Boston)[names(Boston) != "crim"]
 
@@ -263,7 +263,9 @@ $$
 
 ```{r summary}
 # (a) Summary and plots
+
 library(MASS)
+
 summary(Weekly)
 plot(Weekly, cex = 0.3, col = "lightblue")
 ```
@@ -273,7 +275,8 @@ plot(Weekly, cex = 0.3, col = "lightblue")
 **(b)**
 
 ```{r logistic regression}
-# (b) Logistic regression
+# (b) Logistic regression model fit
+
 weekly_lreg_fit <- glm(Direction ~ . - Today, data = Weekly, family = binomial)
 summary(weekly_lreg_fit)
 ```
@@ -334,7 +337,7 @@ table(lag_2_lda_pred, test_set$Direction)
 **(f)**
 
 ```{r QDA}
-# (f) QDA model
+# (f) QDA model fit
 
 lag_2_qda_fit <- qda(Direction ~ Lag2, data = train_set)
 lag_2_qda_pred <- predict(lag_2_qda_fit, newdata = test_set, type = "response")$class
@@ -389,6 +392,7 @@ for (k in k_values) {
 
 ```{r modify variables}
 #We use only the first three lags to see if we can improve the accuracy
+
 train_set_KNN <- cbind(train_set$Lag1, train_set$Lag2, train_set$Lag3)
 test_set_KNN <- cbind(test_set$Lag1, test_set$Lag2, test_set$Lag3)
 
@@ -432,9 +436,9 @@ plot(Auto, cex = 0.4, col = "lightblue")
 
 
 cor_mpg01 <- cor(Auto[, c(1:8, 10)])[-9, 9] 
-# Exclude the `name` variable, extract the correlation values with respect to `mpg01`
+#Exclude the `name` variable, extract the correlation values with respect to `mpg01`
 
-# Display the result
+#Display the result
 cor_mpg01
 ```
 
@@ -483,7 +487,7 @@ print(paste("Test Error: ", round(lda_test_error, 4)))
 **(e)**
 
 ```{r QDA MPG}
-# (d) QDA model fit
+# (e) QDA model fit
 
 library(MASS)
 
@@ -503,6 +507,7 @@ print(paste("Test Error: ", round(qda_test_error, 4)))
 **(f)**
 
 ```{r Logistic MPG}
+# (f) Logistic regression model fit
 
 library(MASS)
 
