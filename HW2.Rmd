@@ -1,0 +1,253 @@
+---
+title: "HW2_Statistical Machine Learning"
+author: "Moran Guo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (5.4-1)
+
+*Pf.* Based on the property: $\mathrm{Var}(X + Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) - 2\mathrm{Cov}(X, Y)$, thus we have $$\mathrm{Var}\Big(\alpha X + (1-\alpha)Y\Big) = \mathrm{Var}(\alpha X) + \mathrm{Var}\Big((1-\alpha) Y\Big) +2\mathrm{Cov}\Big(\alpha X, (1-\alpha)Y\Big).$$
+
+Simplifying the equation using $\mathrm{Var}(aX) = a^2 \mathrm{Var}(X)$ and $\mathrm{Cov}(cX, dY) = cd \cdot \mathrm{Cov}(X, Y)$, we have $$\mathrm{Var}\Big(\alpha X + (1-\alpha)Y\Big) = \alpha^2 \mathrm{Var}(X) + (1 - \alpha)^2\mathrm{Var}(Y) + 2\alpha(1-\alpha)\cdot \mathrm{Cov}(X,Y).$$
+
+We find the first derivative of the above equation with respect to $\alpha$, and let it equal to $0$ to find the extremum:
+
+$$2\alpha\mathrm{Var}(X) + (-2)(1-\alpha)\mathrm{Var}(Y) + 2(1-2\alpha)\mathrm{Cov}(X, Y) = 0 \Rightarrow \alpha = \frac{\mathrm{Var}(Y) - \mathrm{Cov}(X,Y)}{\mathrm{Var}(X) + \mathrm{Var}(Y) - 2\mathrm{Cov}(X,Y)}.$$
+
+To verify this extremum is a minimum, we differentiate it again with respect to $\alpha$, and we have $$2\mathrm{Var}(X) + 2\mathrm{Var}(Y) - 4\mathrm{Cov}(X,Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) - 2\mathrm{Cov}(X,Y) = \mathrm{Var}(|X-Y|) \geq 0,$$
+
+Therefore, we confirm that this $\alpha$ minimizes $\mathrm{Var}\Big(\alpha X + (1-\alpha)Y\Big)$.
+
+## Question 2 (5.4-3)
+
+### (a)
+
+For the entire dataset, $k$-fold cross validation is implemented by dividing it into $k$ parts of equal size. The model will be fitted $k$ times, with one of the $k$ subsets serving as the test set and the remaining $k-1$ subsets forming training set. The average error across $k$ trials is computed at the end.
+
+### (b)
+
+#### (i)
+
+Advantage of $k$-fold CV compared to validation set:
+
+1.  More efficient use of the dataset, since the data is splitted into $k$ folds and the model is fitted $k$ times with different combination of folds for training and validation. However, for the validation set approach, the data is only splitted into one validation set and one training set, meaning the model is only trained on part of the data, which is less efficient.
+
+2.  Less variance in model error. $k$-fold CV often results in less variance in performance estimates, since the model was fitted $k$ times and the results were averaged across multiple validation sets, thus the output error is more robust and less dependent on a single split. Whereas validation set approach only fit the model once, and if the validation set split happens to contain more extreme data points which are harder to fit, then the performance of the model may be affected by those data points.
+
+Disadvantage of $k$-fold CV compared to validation set:
+
+1.  Higher computational cost and more complex to implement. It is trivial, since for $k$-fold CV, the model need to be fitted and trained $k$ times, which can be particular challenging for large datasets and/or complex models. But validation set approach only need to train the model once, which requires less computational costs.
+
+#### (ii)
+
+Advantage of $k$-fold CV compared to LOOCV:
+
+1.  Lower computational cost compared to LOOCV. Since LOOCV is essentially $n$-fold CV, when $n$ is large (e.g., $n > 10$), the model need to be fitted and trained $n$ times, as compared to $k$-fold CV, with $k$ normally equals to $5$ or $10$. Therefore LOOCV is more computationally intensive compared to $k$-fold CV, especially when $n$ is large.
+
+2.  More control over bias-variance tradeoff. $k$-fold CV allows us to control the value of $k$ to account for an adequate level of variance and bias. However, LOOCV always uses $n-1$ data points for training, which often time result in low bias but high variance, especially for small datasets. This is due to the fact that for LOOCV, the overlap between training sets is large, and these highly correlated quantities often have high variances compared to those quantities that are not as much correlated, which occurs in $k$-fold CV.
+
+Disadvantage of $k$-fold CV compared to LOOCV:
+
+1.  Slightly higher bias compared to LOOCV. Since $k$-fold CV utilizes smaller training set for every fold, it will results in slightly higher bias than the LOOCV, which uses almost the entire dataset for training.
+
+2.  Not optimal for small dataset compared to LOOCV. When the total number of observation $n$ is small, LOOCV could perform better than $k$-fold CV because it utilizes nearly all available data for training, where as $k$-fold CV only trains the model using $(k-1)/k$ of the data, which could limit the model performance when $n$ is small.
+
+## Question 3 (5.4-5)
+
+### (a)
+
+```{r default logistic regression}
+# Install required packages
+library(ISLR)
+
+set.seed(644)
+
+default_glm_fit <- glm(default ~ income + balance, data = Default, family = "binomial")
+
+summary(default_glm_fit)
+```
+
+### (b)
+
+```{r default validation set}
+set.seed(644)
+
+# Train-test split
+train_set <- sample(nrow(Default), nrow(Default) * 0.80)
+
+# Model fit
+default_glm_fit_vs <- glm(default ~ income + balance, data = Default, family = "binomial", subset = train_set)
+
+# Predict on the test set
+default_prob_vs <- predict(default_glm_fit_vs, Default[-train_set, ], type = "response")
+
+# Assign to the predicted status
+default_pred_vs <- ifelse(default_prob_vs > 0.5, "Yes", "No")
+
+table(default_pred_vs, Default[-train_set, ]$default)
+
+# Validation set error
+mean(Default[-train_set, ]$default != default_pred_vs)
+
+```
+
+### (c)
+
+```{r multi seed validation set}
+for (i in 15:17) {
+  set.seed(i)
+  train_set <- sample(nrow(Default), nrow(Default) * 0.80)
+
+  default_glm_fit_vs <- glm(default ~ income + balance, data = Default, family = "binomial", subset = train_set)
+
+  default_prob_vs <- predict(default_glm_fit_vs, Default[-train_set, ], type = "response")
+
+  default_pred_vs <- ifelse(default_prob_vs > 0.5, "Yes", "No")
+
+  #table(default_pred_vs, Default[-train_set, ]$default)
+
+  print(mean(Default[-train_set, ]$default != default_pred_vs))
+  
+}
+
+```
+From the output test errors, we may safely assume that our method may not have much variance.
+
+### (d)
+
+```{r default glm with dummy}
+set.seed(644)
+
+# Train-test split
+train_set <- sample(nrow(Default), nrow(Default) * 0.80)
+
+# Model fit with `student` as dummy
+default_glm_fit_vs <- glm(default ~ income + balance + student, data = Default, family = "binomial", subset = train_set)
+
+# Predict on the test set
+default_prob_vs <- predict(default_glm_fit_vs, Default[-train_set, ], type = "response")
+
+# Assign to the predicted status
+default_pred_vs <- ifelse(default_prob_vs > 0.5, "Yes", "No")
+
+table(default_pred_vs, Default[-train_set, ]$default)
+
+# Validation set error
+mean(Default[-train_set, ]$default != default_pred_vs)
+
+
+```
+
+From the result, we can see that `student` as a dummy variable does not changes the test error too much.
+
+## Question 4 (5.4-6)
+
+### (a)
+```{r standard error}
+library(ISLR)
+
+set.seed(644)
+
+default_glm_fit <- glm(default ~ income + balance, data = Default, family = "binomial")
+
+summary(default_glm_fit)
+```
+We conclude from the table that the standard errors correspond to `income` and `balance` equal to $4.985e-06$ and $2.274e-04$ respectively.
+
+### (b)
+
+```{r bootfn}
+boot_fn = function(data = Default, index) {
+  return(coef(glm(default ~ income + balance,
+                  data, 
+                  family = binomial, 
+                  subset = index))[c("income", "balance")])
+}
+
+```
+
+### (c)
+
+```{r boot with bootfn}
+library(boot)
+
+boot(Default, boot_fn, R = 100)
+
+```
+### (d)
+
+The standard errors from the bootstrapping and from the previous `glm()` call are very similar.
+
+
+## Question 5 (6.8-1)
+
+### (a)
+
+Best subset model with $k$ predictors has the smallest training error.
+
+### (b)
+
+We don't know any information regarding the test set, so it could be any of these three model.
+
+### (c)
+
+#### i.
+
+True. This is the definition of forward stepwise selection.
+
+#### ii.
+
+True. This is the definition of backward stepwise selection.
+
+#### iii.
+
+False. The predictors of backward / forward stepwise selection at a particular step depends on the previous stage of the selection process. It is not dependent on the other selection strategy.
+
+#### iv.
+
+False. For the same reason of iii.
+
+#### v.
+
+False. The selection of variables using the best subset model **solely** depends on the subset that minimizes RSS on the training set. So it is not necessarily nested for $k$ and $k+1$ predictors.
+
+## Question 6 (6.8-8)
+
+### (a)
+
+```{r simulate normal}
+set.seed(567)
+
+x <- rnorm(100)
+error <- rnorm(100)
+```
+
+### (b)
+
+```{r response vector}
+Y <- 4 + (0.5) * x + 3 * x^2 + 1 * x^3 + error
+
+plot(x, Y)
+```
+
+### (c)
+
+```{r best subset selection}
+# Load required packages
+library(leaps)
+
+x_vec <- poly(x, 10, raw = TRUE)
+
+colnames(x_vec) <- rep("X", 10)
+
+reg_all <- regsubsets(Y ~ ., data = data.frame(Y, x_vec), nvmax = 10)
+reg_summary <- summary(reg_all)
+
+# Plots
+reg_summary
+```
