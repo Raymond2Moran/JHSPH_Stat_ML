@@ -116,6 +116,7 @@ for (i in 15:17) {
 }
 
 ```
+
 From the output test errors, we may safely assume that our method may not have much variance.
 
 ### (d)
@@ -148,6 +149,7 @@ From the result, we can see that `student` as a dummy variable does not changes 
 ## Question 4 (5.4-6)
 
 ### (a)
+
 ```{r standard error}
 library(ISLR)
 
@@ -157,6 +159,7 @@ default_glm_fit <- glm(default ~ income + balance, data = Default, family = "bin
 
 summary(default_glm_fit)
 ```
+
 We conclude from the table that the standard errors correspond to `income` and `balance` equal to $4.985e-06$ and $2.274e-04$ respectively.
 
 ### (b)
@@ -179,10 +182,10 @@ library(boot)
 boot(Default, boot_fn, R = 100)
 
 ```
+
 ### (d)
 
 The standard errors from the bootstrapping and from the previous `glm()` call are very similar.
-
 
 ## Question 5 (6.8-1)
 
@@ -237,17 +240,194 @@ plot(x, Y)
 
 ### (c)
 
-```{r best subset selection}
+```{r best subset selection, echo=FALSE}
 # Load required packages
 library(leaps)
 
 x_vec <- poly(x, 10, raw = TRUE)
 
-colnames(x_vec) <- rep("X", 10)
+colnames(x_vec) <- paste0("X", 1:10)
 
 reg_all <- regsubsets(Y ~ ., data = data.frame(Y, x_vec), nvmax = 10)
 reg_summary <- summary(reg_all)
 
 # Plots
-reg_summary
+
+min_cp <- which.min(reg_summary$cp)
+
+plot(reg_summary$cp, xlab = "# of Polynomial Terms", ylab = "C_p", type = "l")
+points(min_cp, reg_summary$cp[min_cp], col = "red", pch = 2, lwd = 3)
+
+min_bic <- which.min(reg_summary$bic)
+
+plot(reg_summary$bic, xlab = "Number of Polynomial terms", ylab = "BIC", type = "l")
+
+points(min_bic, reg_summary$bic[min_bic], col = "red", pch = 2, lwd = 3)
+
+min_adj_R2 <- which.max(reg_summary$adjr2)  
+plot(reg_summary$adjr2, xlab = "Number of Polynomial terms",
+     ylab = "Adjusted R2", type = "l")
+points(min_adj_R2, reg_summary$adjr2[min_adj_R2],
+       col = "red", pch = 2, lwd = 3)
+
+coef(reg_all, min_bic)
+#coef(reg_all, min_cp)
+#coef(reg_all, min_adj_R2)
+
+```
+
+From the result, we can see that adjusted $R^2$, $BIC$, and $C_p$ all choose the 4-variable model. Therefore, the best model is the 4 variables listed above.
+
+### (d)
+
+``` {r forward and backward selection}
+reg_forward <- regsubsets(Y ~ ., data = data.frame(Y, x_vec), nvmax = 10, method = "forward")
+forward_summary <- summary(reg_forward)
+
+reg_backward <- regsubsets(Y ~ ., data = data.frame(Y, x_vec), nvmax = 10, method = "backward")
+backward_summary <- summary(reg_backward)
+
+# Plots
+par(mfrow = c(2,3))
+
+min_cp <- which.min(forward_summary$cp)
+
+plot(forward_summary$cp, xlab = "# of Polynomial Terms", ylab = "Forward Stepwise C_p", type = "l")
+points(min_cp, forward_summary$cp[min_cp], col = "red", pch = 2, lwd = 3)
+
+min_bic <- which.min(forward_summary$bic)
+
+plot(forward_summary$bic, xlab = "Number of Polynomial terms", ylab = "Forward Stepwise BIC", type = "l")
+
+points(min_bic, forward_summary$bic[min_bic], col = "red", pch = 2, lwd = 3)
+
+min_adj_R2 <- which.max(forward_summary$adjr2)  
+plot(forward_summary$adjr2, xlab = "Number of Polynomial terms",
+     ylab = "Forward Stepwise Adjusted R2", type = "l")
+points(min_adj_R2, forward_summary$adjr2[min_adj_R2],
+       col = "red", pch = 2, lwd = 3)
+
+min_cp <- which.min(backward_summary$cp)
+
+plot(backward_summary$cp, xlab = "# of Polynomial Terms", ylab = "Backward Stepwise C_p", type = "l")
+points(min_cp, backward_summary$cp[min_cp], col = "red", pch = 2, lwd = 3)
+
+min_bic <- which.min(backward_summary$bic)
+
+plot(backward_summary$bic, xlab = "Number of Polynomial terms", ylab = "Backward Stepwise BIC", type = "l")
+
+points(min_bic, backward_summary$bic[min_bic], col = "red", pch = 2, lwd = 3)
+
+min_adj_R2 <- which.max(backward_summary$adjr2)  
+plot(backward_summary$adjr2, xlab = "Number of Polynomial terms",
+     ylab = "Backward Stepwise Adjusted R2", type = "l")
+points(min_adj_R2, forward_summary$adjr2[min_adj_R2],
+       col = "red", pch = 2, lwd = 3)
+
+# Coefficients
+
+coef(reg_forward, which.min(forward_summary$cp))
+coef(reg_forward, which.min(forward_summary$bic))
+coef(reg_forward, which.max(forward_summary$adjr2))
+coef(reg_backward, which.min(backward_summary$cp))
+coef(reg_backward, which.min(backward_summary$bic))
+coef(reg_backward, which.max(backward_summary$adjr2))
+```
+
+Based on the results, for choosing the best model, the $BIC$ of forward selection gets only three variables, where as the adjusted $R^2$ and $C_p$ of forward selection gets two identical $5$-variable models. The backward selection model chooses a different set of $4$-variable model. All of the models selected by forward & backward selection are different from the previous best subset model.
+
+### (e)
+
+```{r lasso fit}
+# Load required packages
+library(glmnet)
+
+par(mfrow = c(1, 1))
+x_matrix <- as.matrix(x_vec)
+lasso_fit <- cv.glmnet(x_matrix, Y, alpha = 1, nfolds = 10)
+lambda <- lasso_fit$lambda.min
+plot(lasso_fit)
+
+predict(lasso_fit, s = lambda, type = "coefficients")
+```
+
+From the summary result, we can see that Lasso model chooses the best model, which is the same as the previous forward stepwise selection $BIC$ model.
+
+### (f)
+
+``` {r lasso 2}
+# Define Y_2
+Y_2 <- 1 + 2 * x^7 + error
+
+reg_2_all <- regsubsets(Y_2 ~ ., data = data.frame(Y_2, x_vec), nvmax = 10)
+
+par(mfrow = c(1, 3))
+reg_2_summary <- summary(reg_2_all)
+
+# Plots
+
+min_cp <- which.min(reg_2_summary$cp)
+
+plot(reg_2_summary$cp, xlab = "# of Polynomial Terms", ylab = "C_p of Y_2", type = "l")
+points(min_cp, reg_2_summary$cp[min_cp], col = "red", pch = 2, lwd = 3)
+
+min_bic <- which.min(reg_2_summary$bic)
+
+plot(reg_2_summary$bic, xlab = "Number of Polynomial terms", ylab = "BIC of Y_2", type = "l")
+
+points(min_bic, reg_2_summary$bic[min_bic], col = "red", pch = 2, lwd = 3)
+
+min_adj_R2 <- which.max(reg_2_summary$adjr2)  
+plot(reg_2_summary$adjr2, xlab = "Number of Polynomial terms",
+     ylab = "Adjusted R2 of Y_2", type = "l")
+points(min_adj_R2, reg_2_summary$adjr2[min_adj_R2],
+       col = "red", pch = 2, lwd = 3)
+
+# Coefficients
+
+coef(reg_2_all, min_cp)
+coef(reg_2_all, min_bic)
+coef(reg_2_all, min_adj_R2)
+
+# Lasso regression
+
+par(mfrow = c(1,1))
+
+lasso_fit_2 <- cv.glmnet(x_matrix, Y_2, alpha = 1)
+lambda <- lasso_fit_2$lambda.min
+plot(lasso_fit_2)
+
+predict(lasso_fit_2, s = lambda, type = "coefficients")
+```
+
+The $BIC$ based on the best subset selection model AND the Lasso model identified the correct model. The best subset selection based on adjusted $R^2$ included too many variables.
+
+
+## Question 7 (6.8-9)
+
+### (a)
+
+``` {r train test split}
+# Load required packages
+library(ISLR)
+
+set.seed(789)
+train_ind <- sample(1:nrow(College), nrow(College) * 0.80)
+train_set <- College[train_ind, ]
+test_set <- College[-train_ind, ]
+```
+
+### (b)
+``` {r fit linear model}
+lm_fit <- lm(Apps ~ ., data = train_set)
+lm_pred <- predict(lm_fit, test_set)
+lm_rmse <- sqrt(mean((test_set$Apps - lm_pred)^2))
+lm_rmse
+```
+
+Therefore, the RMSE on the test set is $1079.981$.
+
+### (c)
+``` {r fit ridge}
+
 ```
