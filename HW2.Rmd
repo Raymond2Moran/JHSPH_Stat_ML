@@ -418,6 +418,7 @@ test_set <- College[-train_ind, ]
 ```
 
 ### (b)
+
 ``` {r fit linear model}
 lm_fit <- lm(Apps ~ ., data = train_set)
 lm_pred <- predict(lm_fit, test_set)
@@ -428,6 +429,106 @@ lm_rmse
 Therefore, the RMSE on the test set is $1079.981$.
 
 ### (c)
-``` {r fit ridge}
 
+``` {r fit ridge}
+# Load required packages
+library(glmnet)
+
+xm_train <- model.matrix(Apps ~ ., data = train_set)[, -1]
+
+xm_test <- model.matrix(Apps ~ ., data = test_set)[, -1]
+
+ridge_fit <- cv.glmnet(xm_train, train_set$Apps, alpha = 0) # Set `alpha = 0` to ensure a ridge fit
+
+lambda <- ridge_fit$lambda.min
+
+ridge_pred <- predict(ridge_fit, s = lambda, newx = xm_test)
+
+ridge_rmse <- sqrt(mean((test_set$Apps - ridge_pred)^2))
+
+ridge_rmse
 ```
+
+Thus, the RMSE on the test set for Ridge regression is $1137.579$.
+
+### (d)
+
+``` {r lasso fit again}
+lasso_fit_3 <- cv.glmnet(xm_train, train_set$Apps, alpha = 1) # Set `alpha = 1` to ensure a lasso fit
+
+lambda <- lasso_fit_3$lambda.min
+
+lasso_pred <- predict(lasso_fit_3, s = lambda, newx = xm_test)
+
+lasso_rmse <- sqrt(mean((test_set$Apps - lasso_pred)^2))
+
+lasso_rmse
+
+lasso_coefs <- predict(lasso_fit_3, type = "coefficients", s = lambda)[1:ncol(College), ]
+
+lasso_coefs[lasso_coefs != 0]
+```
+
+The RMSE on the test set of Lasso regression is $1087.336$. There are 16 non-zero coefficient estimates (including the intercept).
+
+### (e)
+
+```{r PCR fit}
+# Load required packages
+library(pls)
+
+set.seed(644)
+
+pcr_fit <- pcr(Apps ~ ., data = train_set, scale = TRUE, validation = "CV")
+
+validationplot(pcr_fit, val.type = "RMSEP")
+
+summary(pcr_fit)
+
+error_cv <- RMSEP(pcr_fit)$val[1, , ]
+
+min_cv <- which.min(error_cv) - 1 # min_cv = 17
+
+pcr_pred <- predict(pcr_fit, test_set, ncomp = min_cv)
+
+pcr_rmse <- sqrt(mean((test_set$Apps - pcr_pred)^2))
+
+pcr_rmse
+```
+The value of $M$ selected by CV is $17$;
+the RMSE on the test set for PCR fit is $1079.981$. 
+
+### (f)
+
+```{r PLS fit}
+set.seed(644)
+
+pls_fit <- plsr(Apps ~ ., data = train_set, scale = TRUE, validation = "CV")
+
+validationplot(pls_fit, val.type = "RMSEP")
+
+summary(pls_fit)
+
+error_cv <- RMSEP(pls_fit)$val[1, , ]
+
+min_cv <- which.min(error_cv) - 1 # min_cv = 16
+
+pls_pred <- predict(pls_fit, test_set, ncomp = min_cv)
+
+pls_rmse <- sqrt(mean((test_set$Apps - pls_pred)^2))
+
+pls_rmse
+```
+The value of $M$ selected by CV is $16$; the RMSE on the test set is $1079.969$.
+
+### (g)
+
+```{r all errors}
+error_all <- c(lm_rmse, ridge_rmse, lasso_rmse, pcr_rmse, pls_rmse)
+
+names(error_all) <- c("lm", "ridge", "lasso", "pcr", "pls")
+
+error_all
+```
+
+It seems that Ridge regression performed a little bit off compared to the rest of the models. PCR & PLS model seem to perform equally well compared to the simple linear model.
