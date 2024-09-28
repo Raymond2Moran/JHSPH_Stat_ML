@@ -21,37 +21,37 @@ $$2\alpha\mathrm{Var}(X) + (-2)(1-\alpha)\mathrm{Var}(Y) + 2(1-2\alpha)\mathrm{C
 
 To verify this extremum is a minimum, we differentiate it again with respect to $\alpha$, and we have $$2\mathrm{Var}(X) + 2\mathrm{Var}(Y) - 4\mathrm{Cov}(X,Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) - 2\mathrm{Cov}(X,Y) = \mathrm{Var}(|X-Y|) \geq 0,$$
 
-Therefore, we confirm that this $\alpha$ minimizes $\mathrm{Var}\Big(\alpha X + (1-\alpha)Y\Big)$.
+<mark> Therefore, we confirm that this $\alpha$ minimizes $\mathrm{Var}\Big(\alpha X + (1-\alpha)Y\Big)$.
 
 ## Question 2 (5.4-3)
 
 ### (a)
 
-For the entire dataset, $k$-fold cross validation is implemented by dividing it into $k$ parts of equal size. The model will be fitted $k$ times, with one of the $k$ subsets serving as the test set and the remaining $k-1$ subsets forming training set. The average error across $k$ trials is computed at the end.
+<mark> For the entire dataset, $k$-fold cross validation is implemented by dividing it into $k$ parts of equal size. The model will be fitted $k$ times, with one of the $k$ subsets serving as the test set and the remaining $k-1$ subsets forming training set. The average error across $k$ trials is computed at the end.
 
 ### (b)
 
 #### (i)
 
-Advantage of $k$-fold CV compared to validation set:
+<mark> Advantage of $k$-fold CV compared to validation set:
 
 1.  More efficient use of the dataset, since the data is splitted into $k$ folds and the model is fitted $k$ times with different combination of folds for training and validation. However, for the validation set approach, the data is only splitted into one validation set and one training set, meaning the model is only trained on part of the data, which is less efficient.
 
 2.  Less variance in model error. $k$-fold CV often results in less variance in performance estimates, since the model was fitted $k$ times and the results were averaged across multiple validation sets, thus the output error is more robust and less dependent on a single split. Whereas validation set approach only fit the model once, and if the validation set split happens to contain more extreme data points which are harder to fit, then the performance of the model may be affected by those data points.
 
-Disadvantage of $k$-fold CV compared to validation set:
+<mark> Disadvantage of $k$-fold CV compared to validation set:
 
 1.  Higher computational cost and more complex to implement. It is trivial, since for $k$-fold CV, the model need to be fitted and trained $k$ times, which can be particular challenging for large datasets and/or complex models. But validation set approach only need to train the model once, which requires less computational costs.
 
 #### (ii)
 
-Advantage of $k$-fold CV compared to LOOCV:
+<mark> Advantage of $k$-fold CV compared to LOOCV:
 
 1.  Lower computational cost compared to LOOCV. Since LOOCV is essentially $n$-fold CV, when $n$ is large (e.g., $n > 10$), the model need to be fitted and trained $n$ times, as compared to $k$-fold CV, with $k$ normally equals to $5$ or $10$. Therefore LOOCV is more computationally intensive compared to $k$-fold CV, especially when $n$ is large.
 
 2.  More control over bias-variance tradeoff. $k$-fold CV allows us to control the value of $k$ to account for an adequate level of variance and bias. However, LOOCV always uses $n-1$ data points for training, which often time result in low bias but high variance, especially for small datasets. This is due to the fact that for LOOCV, the overlap between training sets is large, and these highly correlated quantities often have high variances compared to those quantities that are not as much correlated, which occurs in $k$-fold CV.
 
-Disadvantage of $k$-fold CV compared to LOOCV:
+<mark> Disadvantage of $k$-fold CV compared to LOOCV:
 
 1.  Slightly higher bias compared to LOOCV. Since $k$-fold CV utilizes smaller training set for every fold, it will results in slightly higher bias than the LOOCV, which uses almost the entire dataset for training.
 
@@ -117,7 +117,7 @@ for (i in 15:17) {
 
 ```
 
-From the output test errors, we may safely assume that our method may not have much variance.
+<mark> From the output test errors, we may safely assume that our method may not have much variance.
 
 ### (d)
 
@@ -144,7 +144,7 @@ mean(Default[-train_set, ]$default != default_pred_vs)
 
 ```
 
-From the result, we can see that `student` as a dummy variable does not changes the test error too much.
+<mark> From the result, we can see that `student` as a dummy variable does not changes the test error too much.
 
 ## Question 4 (5.4-6)
 
@@ -160,7 +160,7 @@ default_glm_fit <- glm(default ~ income + balance, data = Default, family = "bin
 summary(default_glm_fit)
 ```
 
-We conclude from the table that the standard errors correspond to `income` and `balance` equal to $4.985e-06$ and $2.274e-04$ respectively.
+<mark> We conclude from the table that the standard errors correspond to `income` and `balance` equal to $4.985e-06$ and $2.274e-04$ respectively.
 
 ### (b)
 
@@ -185,39 +185,39 @@ boot(Default, boot_fn, R = 100)
 
 ### (d)
 
-The standard errors from the bootstrapping and from the previous `glm()` call are very similar.
+<mark> The standard errors from the bootstrapping and from the previous `glm()` call are very similar.
 
 ## Question 5 (6.8-1)
 
 ### (a)
 
-Best subset model with $k$ predictors has the smallest training error.
+<mark> Best subset model with $k$ predictors has the smallest training error.
 
 ### (b)
 
-We don't know any information regarding the test set, so it could be any of these three model.
+<mark> We don't know any information regarding the test set, so it could be any of these three model.
 
 ### (c)
 
 #### i.
 
-True. This is the definition of forward stepwise selection.
+<mark> True. This is the definition of forward stepwise selection.
 
 #### ii.
 
-True. This is the definition of backward stepwise selection.
+<mark> True. This is the definition of backward stepwise selection.
 
 #### iii.
 
-False. The predictors of backward / forward stepwise selection at a particular step depends on the previous stage of the selection process. It is not dependent on the other selection strategy.
+<mark> False. The predictors of backward / forward stepwise selection at a particular step depends on the previous stage of the selection process. It is not dependent on the other selection strategy.
 
 #### iv.
 
-False. For the same reason of iii.
+<mark> False. Reason is the same as iii. — The predictors of backward / forward stepwise selection at a particular step depends on the previous stage of the selection process. It is not dependent on the other selection strategy. So there's no guarantee that one strategy (forward / backward selection) has a relationship with the other.
 
 #### v.
 
-False. The selection of variables using the best subset model **solely** depends on the subset that minimizes RSS on the training set. So it is not necessarily nested for $k$ and $k+1$ predictors.
+<mark> False. The selection of variables using the best subset model **solely** depends on the subset that minimizes RSS on the training set. So it is not necessarily nested for $k$ and $k+1$ predictors.
 
 ## Question 6 (6.8-8)
 
@@ -276,11 +276,11 @@ coef(reg_all, min_bic)
 
 ```
 
-From the result, we can see that adjusted $R^2$, $BIC$, and $C_p$ all choose the 4-variable model. Therefore, the best model is the 4 variables listed above.
+<mark> From the result, we can see that adjusted $R^2$, $BIC$, and $C_p$ all choose the 4-variable model. Therefore, the best model is the 4 variables listed above.
 
 ### (d)
 
-``` {r forward and backward selection}
+```{r forward and backward selection}
 reg_forward <- regsubsets(Y ~ ., data = data.frame(Y, x_vec), nvmax = 10, method = "forward")
 forward_summary <- summary(reg_forward)
 
@@ -334,7 +334,7 @@ coef(reg_backward, which.min(backward_summary$bic))
 coef(reg_backward, which.max(backward_summary$adjr2))
 ```
 
-Based on the results, for choosing the best model, the $BIC$ of forward selection gets only three variables, where as the adjusted $R^2$ and $C_p$ of forward selection gets two identical $5$-variable models. The backward selection model chooses a different set of $4$-variable model. All of the models selected by forward & backward selection are different from the previous best subset model.
+<mark> Based on the results, for choosing the best model, the $BIC$ of forward selection gets only three variables, where as the adjusted $R^2$ and $C_p$ of forward selection gets two identical $5$-variable models. The backward selection model chooses a different set of $4$-variable model. All of the models selected by forward & backward selection are different from the previous best subset model.
 
 ### (e)
 
@@ -351,11 +351,11 @@ plot(lasso_fit)
 predict(lasso_fit, s = lambda, type = "coefficients")
 ```
 
-From the summary result, we can see that Lasso model chooses the best model, which is the same as the previous forward stepwise selection $BIC$ model.
+<mark> From the summary result, we can see that Lasso model chooses the best model, which is the same as the previous forward stepwise selection $BIC$ model.
 
 ### (f)
 
-``` {r lasso 2}
+```{r lasso 2}
 # Define Y_2
 Y_2 <- 1 + 2 * x^7 + error
 
@@ -400,14 +400,13 @@ plot(lasso_fit_2)
 predict(lasso_fit_2, s = lambda, type = "coefficients")
 ```
 
-The $BIC$ based on the best subset selection model AND the Lasso model identified the correct model. The best subset selection based on adjusted $R^2$ included too many variables.
-
+<mark> The $BIC$ based on the best subset selection model AND the Lasso model identified the correct model. The best subset selection based on adjusted $R^2$ included too many variables.
 
 ## Question 7 (6.8-9)
 
 ### (a)
 
-``` {r train test split}
+```{r train test split}
 # Load required packages
 library(ISLR)
 
@@ -419,18 +418,18 @@ test_set <- College[-train_ind, ]
 
 ### (b)
 
-``` {r fit linear model}
+```{r fit linear model}
 lm_fit <- lm(Apps ~ ., data = train_set)
 lm_pred <- predict(lm_fit, test_set)
 lm_rmse <- sqrt(mean((test_set$Apps - lm_pred)^2))
 lm_rmse
 ```
 
-Therefore, the RMSE on the test set is $1079.981$.
+<mark> Therefore, the RMSE on the test set is $1079.981$.
 
 ### (c)
 
-``` {r fit ridge}
+```{r fit ridge}
 # Load required packages
 library(glmnet)
 
@@ -449,11 +448,11 @@ ridge_rmse <- sqrt(mean((test_set$Apps - ridge_pred)^2))
 ridge_rmse
 ```
 
-Thus, the RMSE on the test set for Ridge regression is $1137.579$.
+<mark> Thus, the RMSE on the test set for Ridge regression is $1137.579$.
 
 ### (d)
 
-``` {r lasso fit again}
+```{r lasso fit again}
 lasso_fit_3 <- cv.glmnet(xm_train, train_set$Apps, alpha = 1) # Set `alpha = 1` to ensure a lasso fit
 
 lambda <- lasso_fit_3$lambda.min
@@ -469,7 +468,7 @@ lasso_coefs <- predict(lasso_fit_3, type = "coefficients", s = lambda)[1:ncol(Co
 lasso_coefs[lasso_coefs != 0]
 ```
 
-The RMSE on the test set of Lasso regression is $1087.336$. There are 16 non-zero coefficient estimates (including the intercept).
+<mark> The RMSE on the test set of Lasso regression is $1087.336$. There are 16 non-zero coefficient estimates (including the intercept).
 
 ### (e)
 
@@ -495,8 +494,8 @@ pcr_rmse <- sqrt(mean((test_set$Apps - pcr_pred)^2))
 
 pcr_rmse
 ```
-The value of $M$ selected by CV is $17$;
-the RMSE on the test set for PCR fit is $1079.981$. 
+
+<mark> The value of $M$ selected by CV is $17$; the RMSE on the test set for PCR fit is $1079.981$.
 
 ### (f)
 
@@ -519,7 +518,8 @@ pls_rmse <- sqrt(mean((test_set$Apps - pls_pred)^2))
 
 pls_rmse
 ```
-The value of $M$ selected by CV is $16$; the RMSE on the test set is $1079.969$.
+
+<mark> The value of $M$ selected by CV is $16$; the RMSE on the test set is $1079.969$.
 
 ### (g)
 
@@ -531,4 +531,4 @@ names(error_all) <- c("lm", "ridge", "lasso", "pcr", "pls")
 error_all
 ```
 
-It seems that Ridge regression performed a little bit off compared to the rest of the models. PCR & PLS model seem to perform equally well compared to the simple linear model.
+<mark> It seems that Ridge regression performed a little bit off compared to the rest of the models. PCR & PLS model seem to perform equally well compared to the simple linear model.

@@ -1,0 +1,90 @@
+---
+title: "HW3"
+author: "Moran Guo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (10.7-8)
+
+### (a)
+
+```{r pve output}
+# Load required packages
+library(ISLR)
+
+pr_out <- prcomp(USArrests, center = TRUE, scale = TRUE)
+pve <- pr_out$sdev^2 / sum(pr_out$sdev^2) # Eq. (10.8)
+pve
+```
+
+### (b)
+
+To obtain the PVE directly, we consider the equation $(10.8)$. The numerator indicates that we need to multiply the loading vector matrix with the scaled/non-scaled data matrix, take the square of the product, and finally obtain the column summation. The denominator is just the summation of data matrix squared.
+
+```{r pve output alternative}
+loading <- pr_out$rotation # Obtain the loading vector
+data_m <- scale(USArrests)
+pve_alt <- colSums((as.matrix(data_m) %*% loading)^2)/sum(data_m^2)
+pve_alt
+```
+
+We can see that the two options for calculating PVE yield the same results.
+
+## Question 2 (10.7-9)
+
+### (a)
+
+```{r complete hierachical clustering}
+# Load required packages 
+library(ISLR)
+
+set.seed(644)
+
+hc_complete <- hclust(dist(USArrests), method = "complete")
+
+plot(hc_complete)
+```
+
+### (b)
+
+```{r cut dendrogram into three clusters}
+hc_cut_3 <- cutree(hc_complete, 3)
+hc_cut_3
+```
+
+### (c)
+
+```{r hierachical with scaling}
+
+data_scaled <- scale(USArrests, center = FALSE)
+
+hc_scaled <- hclust(dist(data_scaled), method = "complete")
+
+plot(hc_scaled)
+```
+
+### (d)
+
+We check the labeled clusters for each state and their agreement:
+
+```{r check labeled clusters}
+hc_scaled_cut_3 <- cutree(hc_scaled, 3)
+
+hc_scaled_cut_3
+
+table(hc_scaled_cut_3, hc_cut_3)
+
+USArrests
+```
+
+Observing the `USArrests` dataset, we found that the `Assault` column representing assault rates inherently has larger variance than the other two features, thus the pairwise Euclidean distance is dominated by `Assault` variable. Therefore, scaling is necessary. Scaling ensures that all four variables have similar contributions to the Euclidean distances, and that's the reason why we are seeing discrepancies between the two hierarchical clustering results. 
+
+So I conclude that the variable should be scaled based on the above reasons.
+
+## Question 3 (10.7-11)
+
