@@ -1,5 +1,5 @@
 ---
-title: "HW3"
+title: "HW3_Statistical Machine Learning"
 author: "Moran Guo"
 date: "`r Sys.Date()`"
 output: html_document
@@ -24,7 +24,7 @@ pve
 
 ### (b)
 
-To obtain the PVE directly, we consider the equation $(10.8)$. The numerator indicates that we need to multiply the loading vector matrix with the scaled/non-scaled data matrix, take the square of the product, and finally obtain the column summation. The denominator is just the summation of data matrix squared.
+<mark>To obtain the PVE directly, we consider the equation $(10.8)$. The numerator indicates that we need to multiply the loading vector matrix with the scaled/non-scaled data matrix, take the square of the product, and finally obtain the column summation. The denominator is just the summation of data matrix squared.
 
 ```{r pve output alternative}
 loading <- pr_out$rotation # Obtain the loading vector
@@ -33,7 +33,7 @@ pve_alt <- colSums((as.matrix(data_m) %*% loading)^2)/sum(data_m^2)
 pve_alt
 ```
 
-We can see that the two options for calculating PVE yield the same results.
+<mark>We can see that the two options for calculating PVE yield the same results.
 
 ## Question 2 (10.7-9)
 
@@ -70,7 +70,7 @@ plot(hc_scaled)
 
 ### (d)
 
-We check the labeled clusters for each state and their agreement:
+<mark>We check the labeled clusters for each state and their agreement:
 
 ```{r check labeled clusters}
 hc_scaled_cut_3 <- cutree(hc_scaled, 3)
@@ -82,9 +82,9 @@ table(hc_scaled_cut_3, hc_cut_3)
 USArrests
 ```
 
-Observing the `USArrests` dataset, we found that the `Assault` column representing assault rates inherently has larger variance than the other two features, thus the pairwise Euclidean distance is dominated by `Assault` variable. Therefore, scaling is necessary. Scaling ensures that all four variables have similar contributions to the Euclidean distances, and that's the reason why we are seeing discrepancies between the two hierarchical clustering results. 
+<mark>Observing the `USArrests` dataset, we found that the `Assault` column representing assault rates inherently has larger variance than the other two features, thus the pairwise Euclidean distance is dominated by `Assault` variable. Therefore, scaling is necessary. Scaling ensures that all four variables have similar contributions to the Euclidean distances, and that's the reason why we are seeing discrepancies between the two hierarchical clustering results. 
 
-So I conclude that the variable should be scaled based on the above reasons.
+<mark>So I conclude that the variable should be scaled based on the above reasons.
 
 ## Question 3 (10.7-11)
 
@@ -93,7 +93,7 @@ So I conclude that the variable should be scaled based on the above reasons.
 ```{r import csv}
 setwd("~/JHSPH_Stat_ML/")
 data <- read.csv("./Ch10Ex11.csv", header = FALSE)
-data
+#data
 ```
 
 ### (b)
@@ -110,7 +110,8 @@ table(sample_status, cutree(hc_complete, k = 2))
 
 plot(hc_complete)
 ```
-To test for whether or not the result depends on linkage types, we do:
+
+<mark>To test for whether or not the result depends on linkage types, we do:
 
 ```{r hiearchical clustering average}
 hc_average <- hclust(correlation_d, method = "average")
@@ -118,13 +119,19 @@ hc_average <- hclust(correlation_d, method = "average")
 table(sample_status, cutree(hc_average, k = 2))
 
 plot(hc_average)
+
+hc_single <- hclust(correlation_d, method = "single")
+#Single linkage
+table(sample_status, cutree(hc_single, k = 2))
+
+plot(hc_single)
 ```
 
-We observed different results, thus it does depend on the  type of linkage selected.
+<mark>We observed different results, thus it does depend on the type of linkage selected.
 
 ### (c) 
 
-To give a best representation of which genes differ the most, we calculate the absolute mean value difference:
+<mark>To give a best representation of which genes differ the most, we calculate the absolute mean value difference:
 
 ```{r abs mean diff}
 rownames(data) = paste0("gene", 1:1000)
@@ -146,3 +153,5 @@ abs_eff_size <- sort(abs(healthy_means - diseased_means) * sqrt(2) / sqrt(health
 abs_mean_diff
 abs_eff_size
 ```
+
+<mark>From the result of `abs_mean_diff` and `abs_eff_size`, we can see that `gene600` are on the top of both lists, so they differ the most overall across the two groups, `healthy` and `diseased` individuals.
