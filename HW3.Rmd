@@ -88,3 +88,36 @@ So I conclude that the variable should be scaled based on the above reasons.
 
 ## Question 3 (10.7-11)
 
+### (a)
+
+```{r import csv}
+setwd("~/JHSPH_Stat_ML/")
+data <- read.csv("./Ch10Ex11.csv", header = FALSE)
+data
+```
+
+### (b)
+
+```{r hierachical clustering complete}
+correlation_d <- as.dist(1 - cor(data))
+
+sample_status <- gl(2, 20) # label vectors
+
+hc_complete <- hclust(correlation_d, method = "complete")
+#Complete linkage
+
+table(sample_status, cutree(hc_complete, k = 2)) 
+
+plot(hc_complete)
+```
+To test for whether or not the result depends on linkage types, we do:
+
+```{r hiearchical clustering average}
+hc_average <- hclust(correlation_d, method = "average")
+#Average linkage
+table(sample_status, cutree(hc_average, k = 2))
+
+plot(hc_average)
+```
+
+We observed different results, thus it does depend on the  type of linkage selected.
