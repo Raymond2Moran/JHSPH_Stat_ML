@@ -121,3 +121,28 @@ plot(hc_average)
 ```
 
 We observed different results, thus it does depend on the  type of linkage selected.
+
+### (c) 
+
+To give a best representation of which genes differ the most, we calculate the absolute mean value difference:
+
+```{r abs mean diff}
+rownames(data) = paste0("gene", 1:1000)
+healthy_data <- data[, 1:20]
+diseased_data <- data[, 21:40]
+
+healthy_means <- rowMeans(healthy_data)
+diseased_means <- rowMeans(diseased_data)
+
+
+abs_mean_diff <- sort(abs(healthy_means - diseased_means),
+                      decreasing = TRUE)[1:3]
+
+healthy_var <- apply(healthy_data, 1, var)
+diseased_var <- apply(diseased_data, 1, var)
+
+abs_eff_size <- sort(abs(healthy_means - diseased_means) * sqrt(2) / sqrt(healthy_var + diseased_var), decreasing = TRUE)[1:3]
+
+abs_mean_diff
+abs_eff_size
+```

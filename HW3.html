@@ -8576,6 +8576,33 @@ table(sample_status, cutree(hc_average, k = 2))</code></pre>
 <p>We observed different results, thus it does depend on the type of
 linkage selected.</p>
 </div>
+<div id="c-1" class="section level3">
+<h3>(c)</h3>
+<p>To give a best representation of which genes differ the most, we
+calculate the absolute mean value difference:</p>
+<pre class="r"><code>rownames(data) = paste0(&quot;gene&quot;, 1:1000)
+healthy_data &lt;- data[, 1:20]
+diseased_data &lt;- data[, 21:40]
+
+healthy_means &lt;- rowMeans(healthy_data)
+diseased_means &lt;- rowMeans(diseased_data)
+
+
+abs_mean_diff &lt;- sort(abs(healthy_means - diseased_means),
+                      decreasing = TRUE)[1:3]
+
+healthy_var &lt;- apply(healthy_data, 1, var)
+diseased_var &lt;- apply(diseased_data, 1, var)
+
+abs_eff_size &lt;- sort(abs(healthy_means - diseased_means) * sqrt(2) / sqrt(healthy_var + diseased_var), decreasing = TRUE)[1:3]
+
+abs_mean_diff</code></pre>
+<pre><code>##  gene600  gene584  gene549 
+## 2.747577 2.601985 2.550757</code></pre>
+<pre class="r"><code>abs_eff_size</code></pre>
+<pre><code>##  gene502  gene589  gene600 
+## 3.262428 3.170059 3.043190</code></pre>
+</div>
 </div>
 
 
