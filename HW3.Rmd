@@ -82,7 +82,7 @@ table(hc_scaled_cut_3, hc_cut_3)
 USArrests
 ```
 
-<mark>Observing the `USArrests` dataset, we found that the `Assault` column representing assault rates inherently has larger variance than the other two features, thus the pairwise Euclidean distance is dominated by `Assault` variable. Therefore, scaling is necessary. Scaling ensures that all four variables have similar contributions to the Euclidean distances, and that's the reason why we are seeing discrepancies between the two hierarchical clustering results. 
+<mark>Observing the `USArrests` dataset, we found that the `Assault` column representing assault rates inherently has larger variance than the other two features, thus the pairwise Euclidean distance is dominated by `Assault` variable. Therefore, scaling is necessary. Scaling ensures that all four variables have similar contributions to the Euclidean distances, and that's the reason why we are seeing discrepancies between the two hierarchical clustering results. Moreover, the variable `UrbanPop` has different unit than the rest variables, which further rationalizes the scaling.
 
 <mark>So I conclude that the variable should be scaled based on the above reasons.
 
@@ -127,11 +127,11 @@ table(sample_status, cutree(hc_single, k = 2))
 plot(hc_single)
 ```
 
-<mark>We observed different results, thus it does depend on the type of linkage selected.
+<mark>Comparing the cluster dendrogram, we see that: 1. `complete` and `average` linkage produces two groups of genes, but the gene composition with in groups are different; for the `single` linkage, we failed to distinguish any obvious "groups".  Thus we conclude that the result does depend on the type of linkage selected.
 
 ### (c) 
 
-<mark>To give a best representation of which genes differ the most, we calculate the absolute mean value difference:
+<mark>To give a best representation of which genes differ the most, we can do the following: 1. Calculate the absolute mean difference between the healthy and diseased individuals, and 2. Do a 2-sample t-test between the two groups.
 
 ```{r abs mean diff}
 rownames(data) = paste0("gene", 1:1000)
@@ -143,15 +143,25 @@ diseased_means <- rowMeans(diseased_data)
 
 
 abs_mean_diff <- sort(abs(healthy_means - diseased_means),
-                      decreasing = TRUE)[1:3]
-
-healthy_var <- apply(healthy_data, 1, var)
-diseased_var <- apply(diseased_data, 1, var)
-
-abs_eff_size <- sort(abs(healthy_means - diseased_means) * sqrt(2) / sqrt(healthy_var + diseased_var), decreasing = TRUE)[1:3]
-
+                      decreasing = TRUE)[1:5]
 abs_mean_diff
-abs_eff_size
 ```
 
-<mark>From the result of `abs_mean_diff` and `abs_eff_size`, we can see that `gene600` are on the top of both lists, so they differ the most overall across the two groups, `healthy` and `diseased` individuals.
+```{r two sample t test}
+
+p_val <- rep(NA, nrow(data))
+
+for (i in 1:nrow(data)) {
+  healthy_data <- data[i, 1:20]  
+  diseased_data <- data[i, 21:40] 
+  p_val[i] <- t.test(healthy_data, diseased_data)$p.value
+}
+
+top_genes <- order(p_val)[1:5]
+
+gene_names <- rownames(data)[top_genes]
+gene_names
+p_val[top_genes]
+```
+
+<mark>From the result of `abs_mean_diff` and `top_genes`, we can see that `gene600`, `gene502` are on the top of both lists, so they differ the most overall across the two groups, `healthy` and `diseased` individuals.
