@@ -1,0 +1,149 @@
+---
+title: "HW4_Statistical Machine Learning"
+author: "Moran Guo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (8.4-10)
+
+### (a)
+
+```{r import data and log-transform}
+# Load required packages
+library(ISLR)
+
+data <- Hitters
+data <- data[!is.na(data$Salary), ]
+data$Salary <- log(data$Salary)
+
+head(data)
+```
+
+### (b)
+
+```{r train test split}
+set.seed(644)
+
+training_set <- data[1:200, ]
+test_set <- data[201:nrow(data), ]
+
+dim(training_set)
+dim(test_set)
+```
+
+### (c)
+
+```{r boosting}
+library(gbm)
+shrinkage_val <- c(0.0001, 0.001, 0.01, 0.02, 0.03,  0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1)
+
+training_mse <- numeric(length(shrinkage_val))
+
+for (i in seq_along(shrinkage_val)) {
+  boost_model <- gbm(
+    formula = Salary ~ ., 
+    data = training_set, 
+    distribution = "gaussian", 
+    n.trees = 1000, 
+    shrinkage = shrinkage_val[i]
+  )
+  train_pred <- predict(boost_model, training_set, n.trees = 1000)
+  training_mse[i] <- mean((train_pred - training_set$Salary)^2)
+}
+
+plot(shrinkage_val, training_mse, type = 'b', pch = 19, col = "lightblue",
+     xlab = "Shrinkage Parameter (λ)", ylab = "Training Set MSE",
+     main = "Training Set MSE vs. Shrinkage Parameter (λ)")
+```
+
+### (d)
+
+```{r test set boosting}
+
+test_mse <- numeric(length(shrinkage_val))
+
+for (i in seq_along(shrinkage_val)) {
+
+  boost_model <- gbm(
+    formula = Salary ~ ., 
+    data = training_set, 
+    distribution = "gaussian", 
+    n.trees = 1000, 
+    shrinkage = shrinkage_val[i]
+  )
+
+  test_pred <- predict(boost_model, test_set, n.trees = 1000)
+  test_mse[i] <- mean((test_pred - test_set$Salary)^2)
+}
+
+results <- data.frame(Shrinkage = shrinkage_val, Test_MSE = test_mse)
+
+plot(shrinkage_val, test_mse, type = "b", pch = 19, col = "lightblue",
+     xlab = "Shrinkage Parameter (λ)", ylab = "Test Set MSE",
+     main = "Test Set MSE vs. Shrinkage Parameter (λ)")
+
+results
+```
+
+### (e)
+
+I will fit a **simple linear regression model** and a **Ridge regression model**, and then calculate & compare test MSE.
+
+```{r compare MSE}
+# Load required packagge
+library(glmnet)
+
+# Simple linear regression model
+linear_model <- lm(Salary ~ ., data = training_set)
+
+linear_pred <- predict(linear_model, newdata = test_set)
+
+linear_test_mse <- mean((linear_pred - test_set$Salary)^2)
+
+print(paste("Linear Regression Test MSE:", linear_test_mse))
+
+# Ridge regression model
+
+x_train <- model.matrix(Salary ~ ., data = training_set)[, -1]
+y_train <- training_set$Salary
+x_test <- model.matrix(Salary ~ ., data = test_set)[, -1]
+
+ridge_model <- cv.glmnet(x_train, y_train, alpha = 0, standardize = TRUE)
+
+ridge_pred <- predict(ridge_model, s = ridge_model$lambda.min, newx = x_test)
+
+ridge_test_mse <- mean((ridge_pred - test_set$Salary)^2)
+print(paste("Ridge Regression Test MSE:", ridge_test_mse))
+```
+
+Based on the results of test MSE, we can observe that for the optimal value of $\lambda \ (0.01)$, the boosting method on the test set performed better than both simple linear regression & Ridge regression model.
+
+### (f)
+
+```{r variable importance}
+importance <- summary(boost_model)
+print(importance)
+
+summary(boost_model, cBars = 6, las = 1, main = "Variable Importance")
+```
+
+From both the importance table & the figure, we can conclude that variables `CRBI`, `Assists`, `PutOuts` are the three most important ones.
+
+### (g)
+
+```{r bagging}
+library(randomForest)
+
+set.seed(999)
+
+bagging_model <- randomForest(Salary ~ ., data = training_set, mtry = ncol(training_set) - 1, ntree = 1000, importance = TRUE)
+
+bagging_pred <- predict(bagging_model, newdata = test_set)
+bagging_test_mse <- mean((bagging_pred - test_set$Salary)^2)
+print(paste("Bagging Test MSE:", bagging_test_mse))
+```
