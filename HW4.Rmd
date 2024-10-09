@@ -147,3 +147,125 @@ bagging_pred <- predict(bagging_model, newdata = test_set)
 bagging_test_mse <- mean((bagging_pred - test_set$Salary)^2)
 print(paste("Bagging Test MSE:", bagging_test_mse))
 ```
+
+So the MSE of Bagging is approximately $0.2316$.
+
+## Question 2 (9.7-7)
+
+### (a)
+
+```{r import data}
+# Load required packages
+library(ISLR)
+
+data_auto <- Auto
+mpg_median <- median(Auto$mpg)
+data_auto$mpg_high <- ifelse(Auto$mpg > mpg_median, 1, 0)
+head(data_auto)
+```
+
+### (b)
+
+```{r svm}
+# Load required packages
+library(e1071)
+
+set.seed(1234)
+
+data_auto$mpg_high <- as.factor(data_auto$mpg_high)
+
+
+svm_tune <- tune(svm, mpg_high ~ ., data = data_auto, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 10, 100)))
+
+summary(svm_tune)
+
+best <- svm_tune$best.model
+summary(best)
+```
+
+Based on the error of the cross-validation (and the summaries), we conclude that `cost = 1` leads to the lowest error rate and smallest dispersion.
+
+### (c)
+
+```{r radial kernel}
+# Load required packages
+library(e1071)
+
+set.seed(1001)
+
+cost <- c(0.001, 0.01, 0.1, 1, 10, 100)
+gamma <- c(0.0001, 0.001, 0.1, 0.5, 1, 2, 3, 4)
+
+svm_tune_rad <- tune(svm, mpg_high ~ ., data = data_auto, kernel = "radial", ranges = list(cost = cost, gamma = gamma))
+
+summary(svm_tune_rad)
+
+best <- svm_tune_rad$best.model
+summary(best)
+```
+
+```{r degree kernel}
+# Load required packages
+library(e1071)
+
+degrees <- c(2, 3, 4)
+
+svm_tune_poly <- tune(svm, mpg_high ~ ., data = data_auto, kernel = "polynomial", ranges = list(cost = cost, degree = degrees))
+
+summary(svm_tune_poly)
+```
+
+From the results, we can see that for the SVM radial kernel fit, the optimal parameters are `cost = 10` and $\gamma = 0.1$; for the SVM polynomial kernel fit, the optimal parameters are `cost = 100` and `degree = 2`.
+
+
+### (d)
+
+``` {r svm plots}
+library(e1071)
+
+best_radial_svm <- svm_tune_rad$best.model
+best_poly_svm <- svm_tune_poly$best.model
+
+#par(mar = c(2, 2, 2, 1), bg = "white") 
+
+custom_palette <- colorRampPalette(c("white", "pink", "lightblue"))
+
+plot(best_radial_svm, data_auto, mpg ~ horsepower,
+     main = "Radial Kernel: mpg vs. horsepower",
+     symbolPalette = c("red", "blue"),
+     color.palette = custom_palette,
+     svSymbol = 16, dataSymbol = 1, grid = 100)
+
+plot(best_radial_svm, data_auto, mpg ~ weight,
+     main = "Radial Kernel: mpg vs. weight",
+     symbolPalette = c("red", "blue"),
+     color.palette = custom_palette,
+     svSymbol = 16, dataSymbol = 1, grid = 100)
+
+plot(best_radial_svm, data_auto, mpg ~ acceleration,
+     main = "Radial Kernel: mpg vs. acceleration",
+     symbolPalette = c("red", "blue"),
+     color.palette = custom_palette,
+     svSymbol = 16, dataSymbol = 1, grid = 100)
+
+plot(best_poly_svm, data_auto, mpg ~ horsepower,
+     main = "Polynomial Kernel: mpg vs. horsepower",
+     symbolPalette = c("green", "purple"),
+     color.palette = custom_palette,
+     svSymbol = 16, dataSymbol = 1, grid = 100)
+
+plot(best_poly_svm, data_auto, mpg ~ weight,
+     main = "Polynomial Kernel: mpg vs. weight",
+     symbolPalette = c("green", "purple"),
+     color.palette = custom_palette,
+     svSymbol = 16, dataSymbol = 1, grid = 100)
+
+plot(best_poly_svm, data_auto, mpg ~ acceleration,
+     main = "Polynomial Kernel: mpg vs. acceleration",
+     symbolPalette = c("green", "purple"),
+     color.palette = custom_palette,
+     svSymbol = 16, dataSymbol = 1, grid = 100)
+
+```
+
+
