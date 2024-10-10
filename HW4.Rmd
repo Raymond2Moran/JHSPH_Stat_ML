@@ -92,7 +92,7 @@ results
 
 ### (e)
 
-I will fit a **simple linear regression model** and a **Ridge regression model**, and then calculate & compare test MSE.
+<mark>I will fit a **simple linear regression model** and a **Ridge regression model**, and then calculate & compare test MSE.
 
 ```{r compare MSE}
 # Load required packagge
@@ -121,7 +121,7 @@ ridge_test_mse <- mean((ridge_pred - test_set$Salary)^2)
 print(paste("Ridge Regression Test MSE:", ridge_test_mse))
 ```
 
-Based on the results of test MSE, we can observe that for the optimal value of $\lambda \ (0.01)$, the boosting method on the test set performed better than both simple linear regression & Ridge regression model.
+<mark>Based on the results of test MSE, we can observe that for the optimal value of $\lambda \ (0.01)$, the boosting method on the test set performed better than both simple linear regression & Ridge regression model.
 
 ### (f)
 
@@ -132,7 +132,7 @@ print(importance)
 #summary(boost_model, cBars = 6, las = 1, main = "Variable Importance")
 ```
 
-From both the importance table & the figure, we can conclude that variables `CAtBat`, `PutOuts`, `Walks` are the three most important ones.
+<mark>From both the importance table & the figure, we can conclude that variables `CAtBat`, `PutOuts`, `Walks` are the three most important ones.
 
 ### (g)
 
@@ -148,7 +148,7 @@ bagging_test_mse <- mean((bagging_pred - test_set$Salary)^2)
 print(paste("Bagging Test MSE:", bagging_test_mse))
 ```
 
-So the MSE of Bagging is approximately $0.2316$, this is lower than the value of Boosting, Linear & Ridge Regression.
+<mark>So the MSE of Bagging is approximately $0.2316$, this is lower than the value of Boosting, Linear & Ridge Regression.
 
 ## Question 2 (9.7-7)
 
@@ -166,7 +166,7 @@ head(data_auto)
 
 ### (b)
 
-Based on previous result of the `Auto` dataset, I intuitively choose variables `displacement` and `weight` to train and build an SVM classifier to separate high and low mpg cars.
+<mark>Based on previous result of the `Auto` dataset, I intuitively choose variables `displacement` and `weight` to train and build an SVM classifier to separate high and low mpg cars.
 
 ```{r svm}
 # Load required packages
@@ -182,7 +182,7 @@ svm_linear_tune <- tune(svm, mpg_high ~ displacement + weight, data = data_auto,
 summary(svm_linear_tune)
 ```
 
-Based on the error of the cross-validation (and the summaries), we conclude that `cost = 0.1` leads to the lowest error rate. Cost value lower than $0.1$ leads to higher error rates, suggesting evidence of underfitting; while higher cost values indicating overfitting since the model is too complex to account for the testing data.
+<mark>Based on the error of the cross-validation (and the summaries), we conclude that `cost = 0.1` leads to the lowest error rate. Cost value lower than $0.1$ leads to higher error rates, suggesting evidence of underfitting; while higher cost values indicating overfitting since the model is too complex to account for the testing data.
 
 ### (c)
 
@@ -214,17 +214,17 @@ svm_tune_poly <- tune(svm, mpg_high ~ displacement + weight, data = data_auto, k
 summary(svm_tune_poly)
 ```
 
-From the results, we can see that for the SVM radial kernel fit, the optimal parameters are `cost = 100` and $\gamma = 0.1$; for the SVM polynomial kernel fit, the optimal parameters are `cost = 0.1` and `degree = 3`. Moreover, we could see that the optimal error rates for radial SVM ($0.0945$) is the smallest (thus the best) compared to linear ($0.0969$) and polynomial SVM ($0.1581$), although the error rate difference between the radial and linear SVM could be negligible. I thus conclude that radial SVM models the relationship between `mpg_high` and the rest variables better. This is likely to happen if the relationship of car's mpg and its displacement & weight is not so much linear; however, we need to keep in mind that the linear SVM performed almost equally well compared to the radial kernel. The poor performance of polynomial kernel, on the other hand, suggests that there might not exist a high-order relationship between car's mpg and its displacement & weight.
+<mark>From the results, we can see that for the SVM radial kernel fit, the optimal parameters are `cost = 100` and $\gamma = 0.1$; for the SVM polynomial kernel fit, the optimal parameters are `cost = 0.1` and `degree = 3`. Moreover, we could see that the optimal error rates for radial SVM ($0.0945$) is the smallest (thus the best) compared to linear ($0.0969$) and polynomial SVM ($0.1581$), although the error rate difference between the radial and linear SVM could be negligible. I thus conclude that radial SVM models the relationship between `mpg_high` and the rest variables better. This is likely to happen if the relationship of car's mpg and its displacement & weight is not so much linear; however, we need to keep in mind that the linear SVM performed almost equally well compared to the radial kernel. The poor performance of polynomial kernel, on the other hand, suggests that there might not exist a high-order relationship between car's mpg and its displacement & weight.
 
 ### (d)
 
-Based on previous output:
+<mark>Based on previous output:
 
-The best model for **linear kernel** is: cost = $0.1$;
+<mark>The best model for **linear kernel** is: cost = $0.1$;
 
-The best model for **radial kernel** is: cost = $100$, $\gamma = 0.1$;
+<mark>The best model for **radial kernel** is: cost = $100$, $\gamma = 0.1$;
 
-The best model for **polynomial kernel** is: cost = $0.1$, degree = $3$.
+<mark>The best model for **polynomial kernel** is: cost = $0.1$, degree = $3$.
 
 
 ``` {r svm plots}
@@ -246,9 +246,9 @@ best_polynomial_svm <- svm(mpg_high ~ displacement + weight, data = data_auto, k
 plot(best_polynomial_svm, data_auto, displacement ~ weight)
 ```
 
-**Discussion**:
+<mark>**Discussion**:
 
-All three plot suggest a negative relationship between car's displacement & mpg and also car's weight & mpg. This aligns with our previous discoveries of the dataset using correlation matrix. Looking at the decision boundaries, it seems that the radial SVM is the most accurate one, since it has a relatively convergent & accurate boundary compared to the rest two. Polynomial kernel drawn the boundary too conservative, so that it mis-classified a lot of high-mpg data point into the lower half. Generally, the SVM classification plots using the best parameters support our previous conclusion: radial kernel performs the best, but linear kernel is also good in separating the two categories.
+<mark>All three plots suggest negative relationships between car's displacement & mpg and also car's weight & mpg. This aligns with our previous discoveries of the dataset using correlation matrix. Looking at the decision boundaries, it seems that the radial SVM is the most accurate one, since it has a relatively convergent & accurate boundary compared to the rest two. Polynomial kernel drawn the boundary too conservative, so that it mis-classified a lot of high-mpg data point into the lower half. Generally, the SVM classification plots using the best parameters support our previous conclusion: radial kernel performs the best, but linear kernel is also good in separating the two categories.
 
 
 
@@ -313,11 +313,11 @@ tune_svm <- tune(
 summary(tune_svm)
 ```
 
-Based on the tune results, we can see that `cost` equals to $10$ achieved the smallest error rates.
+<mark>Based on the tune results, we can see that `cost` equals to $10$ achieved the smallest error rates.
 
 ### (e)
 
-We use `cost = 10` to compute the training and test error rates.
+<mark>We use `cost = 10` to compute the training and test error rates.
 
 ```{r svm adjusted cost}
 
@@ -332,5 +332,5 @@ test_error_best <- mean(test_pred_best != test_set$Purchase)
 cat("Testing set error rate for the best linear SVM model:", test_error_best, "\n")
 ```
 
-We can see that after applying the optimal cost $10$, training error rate remained the same, while testing error slightly increased from $0.1222222$ to $0.1259$. This might suggest `cost = 10` causes the model to slightly overfit on the training data.
+<mark>We can see that after applying the optimal cost $10$, training error rate remained the same, while testing error slightly increased from $0.1222222$ to $0.1259$. This might suggest `cost = 10` causes the model to slightly overfit on the training data.
 
