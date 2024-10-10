@@ -40,7 +40,7 @@ dim(test_set)
 
 ```{r boosting}
 library(gbm)
-shrinkage_val <- c(0.0001, 0.001, 0.01, 0.02, 0.03,  0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1)
+shrinkage_val <- c(0.0001, 0.001, 0.01, 0.02, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1)
 
 training_mse <- numeric(length(shrinkage_val))
 
@@ -58,7 +58,7 @@ for (i in seq_along(shrinkage_val)) {
 
 plot(shrinkage_val, training_mse, type = 'b', pch = 19, col = "lightblue",
      xlab = "Shrinkage Parameter (λ)", ylab = "Training Set MSE",
-     main = "Training Set MSE vs. Shrinkage Parameter (λ)")
+     main = "Training Set MSE vs. Shrinkage Parameter λ")
 ```
 
 ### (d)
@@ -85,7 +85,7 @@ results <- data.frame(Shrinkage = shrinkage_val, Test_MSE = test_mse)
 
 plot(shrinkage_val, test_mse, type = "b", pch = 19, col = "lightblue",
      xlab = "Shrinkage Parameter (λ)", ylab = "Test Set MSE",
-     main = "Test Set MSE vs. Shrinkage Parameter (λ)")
+     main = "Test Set MSE vs. Shrinkage Parameter λ")
 
 results
 ```
@@ -129,10 +129,10 @@ Based on the results of test MSE, we can observe that for the optimal value of $
 importance <- summary(boost_model)
 print(importance)
 
-summary(boost_model, cBars = 6, las = 1, main = "Variable Importance")
+#summary(boost_model, cBars = 6, las = 1, main = "Variable Importance")
 ```
 
-From both the importance table & the figure, we can conclude that variables `CRBI`, `Assists`, `PutOuts` are the three most important ones.
+From both the importance table & the figure, we can conclude that variables `CAtBat`, `PutOuts`, `Walks` are the three most important ones.
 
 ### (g)
 
@@ -148,7 +148,7 @@ bagging_test_mse <- mean((bagging_pred - test_set$Salary)^2)
 print(paste("Bagging Test MSE:", bagging_test_mse))
 ```
 
-So the MSE of Bagging is approximately $0.2316$.
+So the MSE of Bagging is approximately $0.2316$, this is lower than the value of Boosting, Linear & Ridge Regression.
 
 ## Question 2 (9.7-7)
 
@@ -166,6 +166,8 @@ head(data_auto)
 
 ### (b)
 
+Based on previous result of the `Auto` dataset, I intuitively choose variables `displacement` and `weight` to train and build an SVM classifier to separate high and low mpg cars.
+
 ```{r svm}
 # Load required packages
 library(e1071)
@@ -175,15 +177,12 @@ set.seed(1234)
 data_auto$mpg_high <- as.factor(data_auto$mpg_high)
 
 
-svm_tune <- tune(svm, mpg_high ~ ., data = data_auto, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 10, 100)))
+svm_linear_tune <- tune(svm, mpg_high ~ displacement + weight, data = data_auto, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 10, 100)))
 
-summary(svm_tune)
-
-best <- svm_tune$best.model
-summary(best)
+summary(svm_linear_tune)
 ```
 
-Based on the error of the cross-validation (and the summaries), we conclude that `cost = 1` leads to the lowest error rate and smallest dispersion.
+Based on the error of the cross-validation (and the summaries), we conclude that `cost = 0.1` leads to the lowest error rate. Cost value lower than $0.1$ leads to higher error rates, suggesting evidence of underfitting; while higher cost values indicating overfitting since the model is too complex to account for the testing data.
 
 ### (c)
 
@@ -196,7 +195,7 @@ set.seed(1001)
 cost <- c(0.001, 0.01, 0.1, 1, 10, 100)
 gamma <- c(0.0001, 0.001, 0.1, 0.5, 1, 2, 3, 4)
 
-svm_tune_rad <- tune(svm, mpg_high ~ ., data = data_auto, kernel = "radial", ranges = list(cost = cost, gamma = gamma))
+svm_tune_rad <- tune(svm, mpg_high ~ displacement + weight, data = data_auto, kernel = "radial", ranges = list(cost = cost, gamma = gamma))
 
 summary(svm_tune_rad)
 
@@ -210,62 +209,128 @@ library(e1071)
 
 degrees <- c(2, 3, 4)
 
-svm_tune_poly <- tune(svm, mpg_high ~ ., data = data_auto, kernel = "polynomial", ranges = list(cost = cost, degree = degrees))
+svm_tune_poly <- tune(svm, mpg_high ~ displacement + weight, data = data_auto, kernel = "polynomial", ranges = list(cost = cost, degree = degrees))
 
 summary(svm_tune_poly)
 ```
 
-From the results, we can see that for the SVM radial kernel fit, the optimal parameters are `cost = 10` and $\gamma = 0.1$; for the SVM polynomial kernel fit, the optimal parameters are `cost = 100` and `degree = 2`.
-
+From the results, we can see that for the SVM radial kernel fit, the optimal parameters are `cost = 100` and $\gamma = 0.1$; for the SVM polynomial kernel fit, the optimal parameters are `cost = 0.1` and `degree = 3`. Moreover, we could see that the optimal error rates for radial SVM ($0.0945$) is the smallest (thus the best) compared to linear ($0.0969$) and polynomial SVM ($0.1581$), although the error rate difference between the radial and linear SVM could be negligible. I thus conclude that radial SVM models the relationship between `mpg_high` and the rest variables better. This is likely to happen if the relationship of car's mpg and its displacement & weight is not so much linear; however, we need to keep in mind that the linear SVM performed almost equally well compared to the radial kernel. The poor performance of polynomial kernel, on the other hand, suggests that there might not exist a high-order relationship between car's mpg and its displacement & weight.
 
 ### (d)
+
+Based on previous output:
+
+The best model for **linear kernel** is: cost = $0.1$;
+
+The best model for **radial kernel** is: cost = $100$, $\gamma = 0.1$;
+
+The best model for **polynomial kernel** is: cost = $0.1$, degree = $3$.
+
 
 ``` {r svm plots}
 library(e1071)
 
-best_radial_svm <- svm_tune_rad$best.model
-best_poly_svm <- svm_tune_poly$best.model
+# Best linear model
+best_linear_svm <- svm(mpg_high ~ displacement + weight, data = data_auto, kernel = "linear", cost = 0.1)
 
-#par(mar = c(2, 2, 2, 1), bg = "white") 
+plot(best_linear_svm, data_auto, displacement ~ weight)
 
-custom_palette <- colorRampPalette(c("white", "pink", "lightblue"))
+# Best radial model
+best_radial_svm <- svm(mpg_high ~ displacement + weight, data = data_auto, kernel = "radial", cost = 100, gamma = 0.1)
+                   
+plot(best_radial_svm, data_auto, displacement ~ weight)
 
-plot(best_radial_svm, data_auto, mpg ~ horsepower,
-     main = "Radial Kernel: mpg vs. horsepower",
-     symbolPalette = c("red", "blue"),
-     color.palette = custom_palette,
-     svSymbol = 16, dataSymbol = 1, grid = 100)
+# Best polynomial model
+best_polynomial_svm <- svm(mpg_high ~ displacement + weight, data = data_auto, kernel = "polynomial", cost = 0.1, degree = 3)
+                       
+plot(best_polynomial_svm, data_auto, displacement ~ weight)
+```
 
-plot(best_radial_svm, data_auto, mpg ~ weight,
-     main = "Radial Kernel: mpg vs. weight",
-     symbolPalette = c("red", "blue"),
-     color.palette = custom_palette,
-     svSymbol = 16, dataSymbol = 1, grid = 100)
+**Discussion**:
 
-plot(best_radial_svm, data_auto, mpg ~ acceleration,
-     main = "Radial Kernel: mpg vs. acceleration",
-     symbolPalette = c("red", "blue"),
-     color.palette = custom_palette,
-     svSymbol = 16, dataSymbol = 1, grid = 100)
+All three plot suggest a negative relationship between car's displacement & mpg and also car's weight & mpg. This aligns with our previous discoveries of the dataset using correlation matrix. Looking at the decision boundaries, it seems that the radial SVM is the most accurate one, since it has a relatively convergent & accurate boundary compared to the rest two. Polynomial kernel drawn the boundary too conservative, so that it mis-classified a lot of high-mpg data point into the lower half. Generally, the SVM classification plots using the best parameters support our previous conclusion: radial kernel performs the best, but linear kernel is also good in separating the two categories.
 
-plot(best_poly_svm, data_auto, mpg ~ horsepower,
-     main = "Polynomial Kernel: mpg vs. horsepower",
-     symbolPalette = c("green", "purple"),
-     color.palette = custom_palette,
-     svSymbol = 16, dataSymbol = 1, grid = 100)
 
-plot(best_poly_svm, data_auto, mpg ~ weight,
-     main = "Polynomial Kernel: mpg vs. weight",
-     symbolPalette = c("green", "purple"),
-     color.palette = custom_palette,
-     svSymbol = 16, dataSymbol = 1, grid = 100)
 
-plot(best_poly_svm, data_auto, mpg ~ acceleration,
-     main = "Polynomial Kernel: mpg vs. acceleration",
-     symbolPalette = c("green", "purple"),
-     color.palette = custom_palette,
-     svSymbol = 16, dataSymbol = 1, grid = 100)
+## Question 3 (9.7-8)
+
+### (a)
+
+```{r manipulate data}
+# Load required packages
+library(ISLR)
+
+library(dplyr)
+
+data("OJ")
+
+set.seed(233)
+
+train_index <- sample(seq_len(nrow(OJ)), size = 800)
+
+train_set <- OJ[train_index, ]  
+test_set <- OJ[-train_index, ]  
+
+print(nrow(train_set))
+print(nrow(test_set))
+```
+
+### (b)
+
+```{r svm fit oj}
+library(e1071)
+
+svm_fit <- svm(Purchase ~ ., data = train_set, kernel = "linear", cost = 0.01, scale = TRUE)
+
+summary(svm_fit)
+```
+
+### (c)
+
+```{r svm train test error}
+train_preds <- predict(svm_fit, train_set)
+train_error_rate <- mean(train_preds != train_set$Purchase)
+cat("Training error rate:", train_error_rate, "\n")
+
+test_preds <- predict(svm_fit, test_set)
+test_error_rate <- mean(test_preds != test_set$Purchase)
+cat("Test error rate:", test_error_rate, "\n")
 
 ```
 
+### (d)
+
+```{r fine tune cost}
+set.seed(1342)
+tune_svm <- tune(
+  svm, 
+  Purchase ~ ., 
+  data = train_set,
+  kernel = "linear",
+  ranges = list(cost = c(0.001, 0.01, 0.05, 0.1, 1, 2, 5, 10))
+)
+
+summary(tune_svm)
+```
+
+Based on the tune results, we can see that `cost` equals to $10$ achieved the smallest error rates.
+
+### (e)
+
+We use `cost = 10` to compute the training and test error rates.
+
+```{r svm adjusted cost}
+
+svm_best <- tune_svm$best.model
+
+train_pred_best <- predict(svm_best, train_set)
+train_error_best <- mean(train_pred_best != train_set$Purchase)
+cat("Training error rate for the best linear SVM model:", train_error_rate, "\n")
+
+test_pred_best <- predict(svm_best, test_set)
+test_error_best <- mean(test_pred_best != test_set$Purchase)
+cat("Testing set error rate for the best linear SVM model:", test_error_best, "\n")
+```
+
+We can see that after applying the optimal cost $10$, training error rate remained the same, while testing error slightly increased from $0.1222222$ to $0.1259$. This might suggest `cost = 10` causes the model to slightly overfit on the training data.
 
