@@ -958,3 +958,97 @@ confusion_matrix_poly
 rmse_poly_svm <- sqrt(mean((as.numeric(test_pred_poly) - as.numeric(test_set$mortstat))^2))
 cat("Best Root Mean Squared Error (RMSE) of SVM with polynomial kernel:", rmse_poly_svm, "\n\n")
 ```
+
+
+## Conclusion
+
+```{r model statistics}
+
+conf_matrix_list <- c(confusion_matrix_logistic,
+                      confusion_matrix_logistic_best,
+                      confusion_matrix_lasso,
+                      confusion_matrix_lasso_best,
+                      confusion_matrix_ridge,
+                      confusion_matrix_ridge_best,
+                      confusion_matrix_lda,
+                      confusion_matrix_qda,
+                      confusion_matrix_dt,
+                      confusion_matrix_dt_best,
+                      confusion_matrix_rf,
+                      confusion_matrix_rf_bagging,
+                      confusion_matrix_gbm,
+                      confusion_matrix_linear,
+                      confusion_matrix_radial,
+                      confusion_matrix_poly)
+
+model_labels <- c("Logistic",
+                  "Logistic Best Model",
+                  "Lasso",
+                  "Lasso Best Model",
+                  "Ridge",
+                  "Ridge Best Model",
+                  "LDA",
+                  "QDA",
+                  "Decision Tree",
+                  "Adjusted Decision Tree",
+                  "Random Forest",
+                  "Random Forest w/ Bagging",
+                  "GBM",
+                  "SVM Linear",
+                  "SVM Radial",
+                  "SVM Poly")
+
+metrics_df <- data.frame(
+  Accuracy = numeric(),
+  Sensitivity = numeric(),
+  Specificity = numeric(),
+  Model = character(),
+  stringsAsFactors = FALSE
+)
+
+label_n <- 1
+
+
+for (i in seq(1, length(conf_matrix_list), by = 6)) {
+  # Extract metrics
+  #conf_matrix <- conf_matrix_list[[i]]
+  accuracy <- conf_matrix_list[[i+2]]['Accuracy'][[1]]
+  print(accuracy)
+  sensitivity <- conf_matrix_list[[i+3]]['Sensitivity'][[1]]
+  specificity <- conf_matrix_list[[i+3]]['Specificity'][[1]]
+  
+  metrics_df <- rbind(metrics_df, data.frame(
+    Accuracy = as.numeric(accuracy),
+    Sensitivity = as.numeric(sensitivity),
+    Specificity = as.numeric(specificity),
+    Model = model_labels[label_n]
+  ))
+  label_n <- label_n + 1
+}
+
+print(metrics_df)
+
+metrics_df$Model_Group <- ifelse(grepl("SVM", metrics_df$Model), "SVM",
+                          ifelse(grepl("Tree|Random|GBM", metrics_df$Model), "Tree-based Model",
+                          ifelse(grepl("Logistic|Lasso|Ridge", metrics_df$Model), "Logistic/Lasso/Ridge",
+                          ifelse(grepl("QDA|LDA", metrics_df$Model), "QDA/LDA", "Other"))))
+
+ggplot(metrics_df, aes(x = Specificity, y = Sensitivity, color = Model_Group, label = Model)) +
+  scale_color_brewer(palette="Dark2") + 
+  geom_point() +
+  geom_text(vjust = -0.5, hjust = 0.75, size = 3, show.legend = FALSE) +
+  labs(
+    title = "Scatter Plot of Specificity vs. Sensitivity",
+    x = "Specificity",
+    y = "Sensitivity",
+    color = "Model Type"
+  ) +
+  theme_classic() + 
+  theme(
+    legend.position = "bottom",            # Move legend to the right
+    legend.title = element_text(size = 11, face = "bold"),  # Adjust legend title font
+    legend.text = element_text(size = 10)  # Adjust legend text size
+  )
+  
+
+```
