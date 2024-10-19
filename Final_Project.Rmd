@@ -1,0 +1,917 @@
+---
+title: "Statistical Machine Learning Final Project"
+author: "Moran Guo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here I report the findings of analyzing `NHANES 2003-2004` to predict the mortality status (binary outcome) for participants 50 years and older.
+
+### Data Cleaning
+
+```{r clean dataset}
+library(tidyverse)
+library(dplyr)
+
+load("~/JHSPH_Stat_ML/nhanes2003-2004.Rda")
+
+data <- nhanes2003_2004
+cat("The raw data dimension is:\n")
+dim(data)
+
+required_variables <- c("SEQN", "mortstat")  # Include participants' ID, mortality status besides the predictors
+
+predictors <- c("RIDAGEYR", "RIAGENDR", "BPQ010", "BPQ060", "SMQ040", "DIQ010", "DIQ050", "DIQ090", "MCQ010", "MCQ053", "MCQ160A", "MCQ160B", "MCQ160K", "MCQ160L", "BMXWAIST", "MCQ160M", "MCQ220", "MCQ245A", "MCQ250A", "MCQ250B", "MCQ250C", "MCQ250E", "MCQ250F", "MCQ250G", "MCQ265", "SSQ011", "SSQ051", "WHQ030", "WHQ040", "LBXRDW", "HSD010", "BPXPULS", "BPXML1", "VIQ200", "BMXBMI", "BPXSY1", "BPXDI1")
+predictors <- unique(c(required_variables, predictors))
+
+missing_predictors <- setdiff(predictors, colnames(data))
+
+cat("The missing predictor is:\n")
+print(missing_predictors)
+
+predictors <- setdiff(predictors, missing_predictors)
+
+data <- subset(data, select = predictors)
+#dim(data)
+
+data <- data %>% filter(!is.na(mortstat))
+
+data$RIDAGEYR <- as.numeric(as.character(data$RIDAGEYR))
+data <- subset(data, RIDAGEYR >= 50)
+
+cat("The final raw data dimension after removing NA's in `mortstat` and selecting for participants greater than 50 years old is:\n")
+dim(data)
+
+
+# Check percentage of NA values
+
+percent_na <- sapply(data, function(col) sum(is.na(col)) / length(col) * 100)
+cat("Percentage of NA values before filtering for mortality statuses:\n")
+print(percent_na)
+
+# Drop the participants whose `mortstat` = NA
+
+
+cat("\nDimension of the data frame after dropping NA's in `mortstats`:\n")
+print(dim(data))
+
+# Re-check percentage of NA values
+
+percent_na <- sapply(data, function(col) sum(is.na(col)) / length(col) * 100)
+cat("\nPercentage of NA values after filtering for mortality statuses:\n")
+print(percent_na)
+
+
+#Check proportion of NA values **by participants**
+
+percent_na_rows <- apply(data, 1, function(row) sum(is.na(row)) / length(row) * 100)
+
+# Create a histogram of the percentage of missing values per participant
+
+hist(
+  percent_na_rows,
+  breaks = 30,
+  main = "Histogram of Percentage of Missing Values per Participant",
+  xlab = "Percentage of Missing Values",
+  ylab = "Frequency",
+  col = "lightblue",
+  border = "black"
+)
+```
+
+We can observe that after dropping the participants (rows) without a valid `mortstat` value (0 or 1) AND selecting for participants that are greater than 50 years old, a total of 2504 participants remained, and we have a reasonable proportion of NA values (by predictors), except for the column of `BPXSY1` and `BPXDI1`, which slightly exceeded 26%. These two columns stand for **"Systolic Blood Pressure"** and **"Diastolic Blood Pressure"** respectively, I argue that these percentages are feasible for further data imputation, so that there is no further need to drop any NA's from the current data set.
+
+### Data Imputation
+
+Here, for the variables `BPXSY1` and `BPXDI1`, I first divided the participants into two groups based on mortality statuses (0 or 1), then I perform imputation of these two variables separately by filling the NA values with **the median value of that group**. This is because participants who died or did not die may have a difference in some key vital signs (such as blood pressure), so performing imputation after separating the data will help to represent the distribution of the true population. My strategy will also apply to the rest of the **continuous variables with NA values** in this data frame, including `LBXRDW` (Red cell distribution width (%)), `BPXML1` (Maximum inflation levels), `BMXBMI` (Body Mass Index), and `BMXWAIST` (Waist circumference).
+
+For the rest variables with NA values (both categorical and binary), I will impute the variables based on a **"majority rule"** of responses from the participants. This applies to variables `HSD010`, `VIQ200`, and `BPXPULS`. Still, my imputation will be carried out **after** separating participants based on mortality statuses.
+
+```{r data imputation}
+library(dplyr)
+
+alive_group <- data %>% filter(mortstat == 0)
+deceased_group <- data %>% filter(mortstat == 1)
+
+continuous_vars <- c("RIDAGEYR", "BPXSY1", "BPXDI1", "LBXRDW", "BPXML1", "BMXBMI", "BMXWAIST")
+
+categorical_vars <- c("HSD010", "VIQ200", "BPXPULS") # Categorical variables with a missing values
+
+# Noticed that directly converting to `numeric variable` causes some issue in factor levels and `labels`, so need to convert to character first 
+
+for (var in continuous_vars) {
+  alive_group[[var]] <- as.numeric(as.character(alive_group[[var]]))
+  deceased_group[[var]] <- as.numeric(as.character(deceased_group[[var]]))
+}
+
+# Use median value to impute missing NA's among continuous variables
+impute_median <- function(data, variables) {
+  for (var in variables) {
+    data[[var]][is.na(data[[var]])] <- median(data[[var]], na.rm = TRUE)
+  }
+  return(data)
+}
+
+alive_group <- impute_median(alive_group, continuous_vars)
+deceased_group <- impute_median(deceased_group, continuous_vars)
+
+# Use majority value to impute missing NA's among categorical variables
+impute_majority_rule <- function(data, variables) {
+  for (var in variables) {
+    majority_value <- names(sort(table(data[[var]]), decreasing = TRUE))[1]
+    data[[var]][is.na(data[[var]])] <- majority_value
+  }
+  return(data)
+}
+
+alive_group <- impute_majority_rule(alive_group, categorical_vars)
+deceased_group <- impute_majority_rule(deceased_group, categorical_vars)
+
+imputed_data <- rbind(alive_group, deceased_group)
+summary(imputed_data)
+
+percent_na <- sapply(imputed_data, function(col) sum(is.na(col)) / length(col) * 100)
+cat("\nPercentage of NA values after imputation:\n")
+print(percent_na)
+```
+
+After imputation, we can see that there are no NA's in the data set (as expected). However, we can observe several features among the variables:
+
+1.  Continuous variables such as `BMXBMI`, `BPXSY1`, etc., have distinct scales and units (`BMXBMI` ranges from 14.70 to 15.58; `BPXSY1` ranges from 80 to 240), which makes **scaling the continuous variables necessary** to remove the bias of prediction due to differential spreads.
+2.  Categorical variables such as `SSQ051` (Anyone to help with financial support) and `WHQ040` (Like to weigh more, less or same) have multiple levels within the questionnaires coded by numbers (e.g., 1, 2, 3): the responses were numerical-coded but have categorical natures. This could substantially bias some classification model if they rely on calculating distances and/or ordinal relationships between different classes. This makes the encoding of categorical variable necessary since it: (a) Removes the implicit ordinal relationships between classes, (b) ensure that distances are measured correctly, and (c) preserves category independence.
+
+Based on above two reasons, performing data encoding & scaling is necessary. Here I describe how I select the specific method(s) for data encoding & scaling:
+
+For data encoding, I selected **one-hot encoding**, which is the most common method used. For every option among every categorical variables ( over $30$ in total), they are coded as stand alone binary variables with level 0's and 1's.
+
+For data scaling, there are generally two kinds of strategy: (a) Min-max scaling, which scales the entire distribution so that the minimum & maximum values equal to 0 and 1 respectively, and (b) Standardization, which subtract the mean value of that variable from each observation and then divided by the standard deviation of that variable: $x_{\text{scaled}} = \frac{x - \bar{x}}{SD_x}$. This strategy centers the mean value of the scaled variable to 0, with standard deviation equals to 1.
+
+### Data Encoding & Scaling
+
+Next, we consider the necessity for performing one-hot encoding for categorical variables and min-max scaling for continuous variables. I argue that one-hot encoding is necessary for some of the model if it is necessary for us to include categorical variables: some categorical variables such as `WHQ040` and `BPQ010` have multiple levels with some different ordinal relationships. E.g., for `BPQ010`, the levels are determined based on increasing time intervals (short time period --\> long time period), while for `WHQ040`, the levels are determined based on whether or not people tend to weight more, less, or stay the same. The order of variable levels differs between different categorical variables, and that's why I think one-hot encode all the categorical variables in the data set is useful in some cases.
+
+For data scaling, noticing that some outliers exist in the data set (such as the maximum of `BMXBMI` equals to 58.58 and minimum of `BPXDI1` equals to 0.00), it might not be a good option to perform min-max scaling because the transformed data will be biased by the outlier(s). So I performed standardization to adjust for different units and spreads of continuous variables.
+
+```{r onehot and minmax}
+
+encoded_data <- imputed_data
+encoded_data$SEQN <- NULL  # Remove the SEQN column, useless
+
+# Remove zero columns
+encoded_data <- encoded_data[, colSums(encoded_data != 0) > 0] 
+
+cat("Dimension of the data set after one-hot encoding and removing zero columns:\n")
+dim(encoded_data)
+
+# Min-max scaling
+# encoded_data <- encoded_data %>%
+#   mutate(across(all_of(continuous_vars), ~ (. - min(.)) / (max(.) - min(.))))
+
+# Standardization
+encoded_data[continuous_vars] <- scale(encoded_data[continuous_vars])
+
+
+summary(encoded_data)
+```
+
+### Train Test Split
+
+Next step I performed train-test split to separate the data into two groups, train set and test set. I used a standard 80/20 split. It is worth noting that I observed the **imbalanced nature** of `mortstat` variable (73% 0's, \~27% 1's), and to account for this, I first separated the participants into two groups based on their alive/deceased status, and then randomly split 80/20 within each group, finally combined the two subgroup together into one big train and/or test data set. This **ensures that we observe a similar proportion of alive and deceased individuals within both train and test set**, with the specific proportions recorded below:
+
+```{r train test split}
+library(caret)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+
+
+alive_group <- encoded_data %>% filter(mortstat == 0)
+deceased_group <- encoded_data %>% filter(mortstat == 1)
+
+set.seed(123456)
+
+alive_train_ind <- sample(seq_len(nrow(alive_group)), size = floor(0.8 * nrow(alive_group)))
+alive_train <- alive_group[alive_train_ind, ]
+alive_test <- alive_group[-alive_train_ind, ]
+
+deceased_train_ind <- sample(seq_len(nrow(deceased_group)), size = floor(0.8 * nrow(deceased_group)))
+deceased_train <- deceased_group[deceased_train_ind, ]
+deceased_test <- deceased_group[-deceased_train_ind, ]
+
+train_set <- bind_rows(alive_train, deceased_train)
+test_set <- bind_rows(alive_test, deceased_test)
+
+print(summary(train_set))
+print(summary(test_set))
+
+continuous_vars <- c("RIDAGEYR", "BPXSY1", "BPXDI1", "LBXRDW", "BPXML1", "BMXBMI", "BMXWAIST")
+
+train_set$Dataset <- "Train"
+test_set$Dataset <- "Test"
+
+# Combine the train and test sets for continuous variables
+combined_set <- rbind(train_set, test_set)
+
+plots <- list()
+
+for (var in continuous_vars) {
+  # Create a density plot for the current variable
+  p <- ggplot(combined_set, aes_string(x = var, fill = "Dataset")) +
+    geom_density(alpha = 0.5) +  # Overlay densities
+    labs(title = paste("Density Plot for", var), x = var, y = "Density") +
+    theme_minimal() +
+    scale_fill_manual(values = c("Train" = "blue", "Test" = "orange")) +
+    theme(legend.position = "top",
+      plot.title = element_text(size = 9),
+      axis.title = element_text(size = 8),
+      axis.text = element_text(size = 6),
+      legend.text = element_text(size = 6),                      
+      legend.title = element_text(size = 8) )
+    plots[[var]] <- p
+}
+
+do.call(grid.arrange, c(plots, ncol = 4, nrow = 2))
+
+cat("Training Set Mortality Status Distribution:\n")
+print(table(train_set$mortstat))
+
+cat("\nTest Set Mortality Status Distribution:\n")
+print(table(test_set$mortstat))
+
+# Display the proportion of alive and deceased in train and test sets
+cat("\nProportion of Alive and Deceased in Training Set:\n")
+print(prop.table(table(train_set$mortstat)))
+
+cat("\nProportion of Alive and Deceased in Test Set:\n")
+print(prop.table(table(test_set$mortstat)))
+
+train_set <- train_set %>%
+  mutate(mortstat = as.numeric(mortstat))
+
+test_set <- test_set %>%
+  mutate(mortstat = as.numeric(mortstat))
+
+# Remove the `Dataset` variables after generating the plot
+train_set$Dataset <- NULL
+test_set$Dataset <- NULL
+```
+
+Based on the output statistics and the density plot describing the distribution of the continuous variable after standardization, we can observe a relatively consistent distribution among all variables, which suggest that we did a relatively well train-test split overall.
+
+### How to quantify the model performance?
+
+A standard way is to do some calculations based on confusion matrices and infer relevant statistics. R's `caret` library `confusionMatrix` function generates a list of statistics based on predicted vs. actual classes.
+
+**The major issue is: Do we concern more about sensitivity or specificity?** Sensitivity measures how well a model correctly detects individuals with outcome of interest (in our case, die) from the entire population; specificity, on the other hand, is the ability for the model to correctly classify an individual without outcome of interest (in our case, alive).
+
+Which one do we care more about? Considering that we build our model to predict individuals with potential mortality outcomes, and grounded on the common sense that we want to avoid deaths (generally) as much as we can, I argue that **we care more about the sensitivity of the prediction model**. That is, when we finally utilize the model, if we observe a positive outcome (class "1", deceased), we want to have a compelling argument that the individual has high risk of dying.
+
+Based on my argument, for the models tested below, **I** **always prioritize model's sensitivity**; if multiple models have similar sensitivity, then I proceed and prioritize the one with better accuracy.
+
+## Model Construction & Evaluation
+
+### Logistic Regression
+
+To build a prediction model using logistic regression and select the best set of variables, we first fit the model using the **scaled and not-encoded raw data**, and we will perform variable selection after that. Note that logistic regression automatically encodes the data, which can be seen from the model summary.
+
+```{r logistic}
+logistic_model <- glm(mortstat ~ ., data = train_set, family = binomial)
+
+summary(logistic_model)
+
+test_pred <- predict(logistic_model, newdata = test_set, type = "response")
+test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0) # Convert the final probabilities to binary classes
+
+
+rmse_logistic <- sqrt(mean((test_set$mortstat - test_pred)^2))
+
+cat("Root Mean Squared Error (RMSE) on the test set for logistic regression:", rmse_logistic, "\n\n")
+confusion_matrix_logistic <- confusionMatrix(factor(test_pred_binary), factor(test_set$mortstat), positive = "1") # Set the positive class to 1 so that 
+
+print(confusion_matrix)
+```
+
+From the summary of the un-optimized model, we can conclude that:
+
+1.  `RIDAGEYR` is a highly significant predictor based on the `glm` model; from the positive coefficient, we can infer that higher age (in years) is associated with higher odds of mortality.
+
+2.  `RIAGENDR2` is a significant predictor, which encodes for "Gender = Female". The model outputs a negative log-odds estimate, thus indicating that being female is associated with reduced odds of mortality *compared to being a male*.
+
+3.  `LBXRDW` is a significant continuous predictor encodes for "Red cell distribution width (%)". A positive log-odds estimate suggests that participants with a higher percentage of red cell distribution width may be associated with higher odds of mortality compared to those falls in normal / low range.
+
+4.  `HSD0102`, `HSD0103`, `HSD0104`, and `HSD0105` are predictors with increased significance levels. These variables indicates the "General health condition" of the participants. It ranges from `HSD0101` to `HSD0105` indicating "Excellent" to "Poor" conditions, with `HSD0107` stands for "refused" and `HSD0109` as "don't know" (zero observations). From the increasing significance level and positive log-odds estimate from `HSD0101` (baseline) to `HSD0105` (poor condition), we can interpret that the extent that participants self report negative health condition serves as a positive predictor of their mortality status.
+
+5.  The overall raw model accuracy is 78.64%, which is **significantly better than the NIR**. This suggests that it performed significantly better than the baseline. The model's sensitivity is only 49.26%, which suggests that it struggles to detect died individuals from the whole population. We could blame the low sensitivity (compared to specificity) to two reasons:
+
+    1.  Imbalanced data, as there are only \~27% of deceased individuals compared to \~73% alive ones, thus the model has fewer data to pick up the signals. As a matter of fact, overall speaking, **the majority of the models tested in this project had lower sensitivity than the specificity**;
+
+    2.  The over-simplicity of the logistic model, thus the overall performance is affected.
+
+Based on the raw model, we selected the top significant variables `RIDAGEYR`, `RIAGENDR`, `LBXRDW`, and `HSD010` as the updated "optimized" model for logistic regression.
+
+```{r logistic best model}
+logistic_model <- glm(mortstat ~ RIDAGEYR + RIAGENDR + LBXRDW + HSD010, data = train_set, family = binomial)
+
+summary(logistic_model)
+
+test_pred <- predict(logistic_model, newdata = test_set, type = "response")
+test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0) # Convert the final probabilities to binary classes
+
+rmse_logistic_best <- sqrt(mean((test_set$mortstat - test_pred)^2))
+
+cat("Root Mean Squared Error (RMSE) on the test set for logistic regression:", rmse_logistic_best, "\n\n")
+confusion_matrix_logistic_best <- confusionMatrix(factor(test_pred_binary), factor(test_set$mortstat), positive = "1") # Set the positive class to 1 so that 
+
+print(confusion_matrix_logistic_best)
+```
+
+From the optimized model, we can see that the overall accuracy improve from 78.64% to 80.04%. However, the sensitivity decreased to 47.79% as the trade off for an increase in specificity. This suggest that the optimized model gets better in predicting alive individuals but performed worse in detecting deceased ones. This might suggest that logistic regression is not the best model to achieve our purpose.
+
+### Lasso & Ridge Regression
+
+For Lasso & Ridge regression, the models themselves does not auto-encode categorical variables. To remove the effect of ordinal relationships based on the nature of them ("1", "2", "3" for different meanings), I first performed one-hot encoding to encode each variable's options into binary variables of "0"s and "1"s. Then I fit the model on the whole encoded & standardized data set **with cross-validation** for both Lasso and Ridge regression.
+
+```{r lasso and ridge}
+# Load required packages
+library(glmnet)
+
+# Lasso regression
+x_train <- model.matrix(mortstat ~ . - 1, data = train_set)
+x_test <- model.matrix(mortstat ~ . - 1, data = test_set)
+
+# Extract the response variable
+y_train <- train_set$mortstat
+y_test <- test_set$mortstat
+
+set.seed(123) 
+# lasso w/ cross validation
+lasso_cv <- cv.glmnet(x_train, y_train, alpha = 1, family = "binomial")
+lambda <- lasso_cv$lambda.min
+plot(lasso_cv)
+lasso_model <- glmnet(x_train, y_train, alpha = 1, lambda = lambda, family = "binomial")
+
+test_pred <- predict(lasso_model, s = lambda, newx = x_test, type = "response")
+test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0)
+
+rmse_lasso <- sqrt(mean((y_test - test_pred)^2))
+cat("Root Mean Squared Error (RMSE) of Lasso Regression:", rmse_lasso, "\n\n")
+
+confusion_matrix_lasso <- confusionMatrix(factor(test_pred_binary), factor(y_test), positive = "1")
+print(confusion_matrix_lasso)
+
+# Examine coefficients
+lasso_coefs <- coef(lasso_model)
+
+# Extract non-zero coefs
+non_zero_coefs_lasso <- lasso_coefs@x
+non_zero_ind_lasso <- lasso_coefs@i + 1
+variable_names_lasso <- lasso_coefs@Dimnames[[1]]
+
+# Get the names of the variables corresponding to them
+non_zero_vars_lasso <- variable_names_lasso[non_zero_ind_lasso]
+
+lasso_results <- data.frame(
+  Variable = non_zero_variables,
+  Coefficient = non_zero_coefs
+)
+
+lasso_results_sorted <- lasso_results[order(-lasso_results$Coefficient), ]
+
+# Ridge regression
+ridge_cv <- cv.glmnet(x_train, y_train, alpha = 0, family = "binomial")
+lambda <- ridge_cv$lambda.min
+plot(ridge_cv)
+ridge_model <- glmnet(x_train, y_train, alpha = 0, lambda = lambda, family = "binomial")
+summary(ridge_model)
+
+# Make predictions using the Ridge model
+test_pred <- predict(ridge_model, s = lambda, newx = x_test, type = "response")
+test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0)
+
+rmse_ridge <- sqrt(mean((y_test - test_pred)^2))
+cat("Root Mean Squared Error (RMSE) of Ridge Regression:", rmse_ridge, "\n\n")
+
+# Generate confusion matrix for Ridge model
+confusion_matrix_ridge <- confusionMatrix(factor(test_pred_binary), factor(y_test), positive = "1")
+print(confusion_matrix_ridge)
+
+# Examine coefficients (ridge)
+ridge_coefs <- coef(ridge_model)
+
+# Extract non-zero coefs (ridge)
+non_zero_coefs_ridge <- ridge_coefs@x
+non_zero_ind_ridge <- ridge_coefs@i + 1
+variable_names_ridge <- ridge_coefs@Dimnames[[1]]
+
+# Get the names of the variables corresponding to them (ridge)
+non_zero_vars_ridge <- variable_names_ridge[non_zero_ind_ridge]
+
+ridge_results <- data.frame(
+  Variable = non_zero_variables,
+  Coefficient = non_zero_coefs
+)
+
+ridge_results_sorted <- ridge_results[order(-ridge_results$Coefficient), ]
+
+cat("Lasso Regression Non-zero Coefficients in descending order:\n\n")
+
+# Top 5 and bottom 5 coefs for lasso
+head(lasso_results_sorted, 5)
+tail(lasso_results_sorted, 5)
+
+cat("Ridge Regression Non-zero Coefficients in descending order:\n\n")
+
+# Top 5 and bottom 5 coefs for lasso
+head(ridge_results_sorted, 5)
+tail(ridge_results_sorted, 5)
+```
+
+From the results, we can interpret that:
+
+1.  Lasso & Ridge achieved similar accuracy (79.44% & 78.04%) significantly greater than the baseline level, however they both struggled in terms of model sensitivity compared to either LDA/QDA or tree-based model which will be listed below.
+
+2.  Non-zero coefficient for Lasso & Ridge regression indicates the relative importance of the variables. The outputted data frame above subsetted for the top and bottom 5 variables with most positive/negative coefficients.
+
+For the next step, I extracted all variables that have **non-zero coefficients from the full Lasso & Ridge regression model**, and re-run it again to observe improvements in prediction (if any):
+
+```{r lasso & ridge best model}
+set.seed(123)
+## Lasso
+non_zero_vars_lasso <- non_zero_vars_lasso[non_zero_vars_lasso != "(Intercept)"] # Remove intercept
+
+# Subset the training data again (lasso)
+x_train_lasso_best <- x_train[, non_zero_vars_lasso]
+
+# Fit the Lasso model again using only the selected variables (CV then regular)
+
+cv_lasso_best <- cv.glmnet(x_train_lasso_best, y_train, alpha = 1, family = "binomial")
+lambda <- cv_lasso_best$lambda.min
+
+lasso_model_best <- glmnet(x_train_lasso_best, y_train, alpha = 1, lambda = lambda, family = "binomial")
+
+test_pred <- predict(lasso_model_best, s = lambda, newx = x_test[, non_zero_vars_lasso], type = "response")
+test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0)
+
+rmse_lasso_best <- sqrt(mean((y_test - test_pred)^2))
+cat("Root Mean Squared Error (RMSE) of Lasso Regression (optimized):", rmse_lasso_best, "\n\n")
+
+confusion_matrix_lasso_best <- confusionMatrix(factor(test_pred_binary), factor(y_test), positive = "1")
+print(confusion_matrix_lasso_best)
+
+## Ridge
+non_zero_vars_ridge <- non_zero_vars_ridge[non_zero_vars_ridge != "(Intercept)"] # Remove intercept
+
+# Subset the training data again (lasso)
+x_train_ridge_best <- x_train[, non_zero_vars_ridge]
+
+# Fit the Ridge model again using only the selected variables (CV then regular)
+
+cv_ridge_best <- cv.glmnet(x_train_ridge_best, y_train, alpha = 1, family = "binomial")
+lambda <- cv_ridge_best$lambda.min
+
+ridge_model_best <- glmnet(x_train_ridge_best, y_train, alpha = 1, lambda = lambda, family = "binomial")
+
+test_pred <- predict(ridge_model_best, s = lambda, newx = x_test[, non_zero_vars_ridge], type = "response")
+test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0)
+
+rmse_ridge_best <- sqrt(mean((y_test - test_pred)^2))
+cat("Root Mean Squared Error (RMSE) of Ridge Regression (optimized):", rmse_ridge_best, "\n\n")
+
+confusion_matrix_ridge_best <- confusionMatrix(factor(test_pred_binary), factor(y_test), positive = "1")
+print(confusion_matrix_ridge_best)
+```
+
+Comparing the optimized Lasso & Ridge regression with the previous full model, we can see that:
+
+1.  Although the overall accuracy of Lasso regression didn't change, the sensitivity of the optimized lasso regression model improved from 47.06% to 49.26%; whereas both the accuracy and sensitivity of Ridge regression experience an increase, especially for sensitivity, from 41.91% to 47.06%. This suggest that both model improved after removing variables with zero coefficients. **However**, even after optimizing the model, they still struggled with identifying deceased individuals – a sensitivity smaller than 50% is not great either.
+
+2.  This suggests that Lasso & Ridge might not be the model(s) to go with.
+
+### Linear Discriminant Analysis (LDA) & Quadratic Discriminant Analysis (QDA)
+
+Considering that LDA/QDA model assumes that the predictor variables **follow a multivariate normal distribution within each class**, then I argue that:
+
+1.  Including the categorical variables in the LDA/QDA model is not ideal, since first, it does not follow a continuous normal distribution, which violates the model assumption,
+
+2.  Secondly, it introduces too much co-linearity to the model, which increases the bias. These two facts are always true regardless of encoding the categorical variables or not, and co-linearity inflates especially when variable encoding introduces too many dummy variables.
+
+Based on the above reasons, I exclude all categorical variables in the data set, and 7 continuous variables are left. These are: `RIDAGEYR` (Age in years), `BPXSY1` (Systolic blood pressure measured in $mm \ Hg$), `BPXDI1` (Diastolic blood pressure measured in $mm \ Hg$), `LBXRDW` (Red cell distribution width (%)), `BPXML1` (Maximum inflation levels measured in $mm \ Hg$), `BMXBMI` (Body Mass Index measured in $kg/m^2$), and `BMXWAIST` (Waist Circumference measured in $cm$).\
+
+How to decide which subset of these variables constitute the best model? Considering that 7 variables in total is not too large for brute-force searches, I built a function to output all the possible combinations of these 7 continuous variables, and then every combination was fitted to both LDA and QDA model, with final confusion matrix statistics (accuracy, sensitivity, and specificity) recorded. Considering that we are more interested about **sensitivity** of the data, the final data frame was outputted in a descending order based on model sensitivity.
+
+```{r LDA loopthrough}
+# Load required packages
+library(MASS)
+
+# Redefining variables
+variables <- c("RIDAGEYR", "BPXSY1", "BPXDI1", "LBXRDW", "BPXML1", "BMXBMI", "BMXWAIST")
+
+evaluate_model <- function(formula, train_data, test_data, test_response) {
+
+  lda_model <- lda(as.formula(formula), data = train_data)
+
+  predictions <- predict(lda_model, newdata = test_data)$class
+  
+  confusion_matrix <- table(Predicted = predictions, Actual = test_response)
+
+  accuracy <- mean(predictions == test_response)
+  sensitivity <- confusion_matrix[2, 2] / (confusion_matrix[2, 2] + confusion_matrix[1, 2])  # Sensitivity 
+  specificity <- confusion_matrix[1, 1] / (confusion_matrix[1, 1] + confusion_matrix[2, 1])  # Specificity
+  
+  return((list(accuracy = accuracy, sensitivity = sensitivity, specificity = specificity)))
+}
+
+variables_comb <- list()
+for (i in 1:length(variables)) {
+  variables_comb <- c(variables_comb, combn(variables, i, simplify = FALSE))
+}
+
+#print(variables_comb)
+
+results <- data.frame(Combination = character(), Accuracy = numeric(), Specificity = numeric(), Sensitivity = numeric(), stringsAsFactors = FALSE)
+
+# Loop over all combinations
+for (comb in variables_comb) {
+  formula <- paste("mortstat ~", paste(comb, collapse = " + "))
+  
+  metrics <- evaluate_model(formula, train_set, test_set, test_set$mortstat)
+  
+# Add the results to the dataframe
+  results <- rbind(results, data.frame(Combination = formula, 
+                                       Accuracy = metrics$accuracy,
+                                       Specificity = metrics$specificity,
+                                       Sensitivity = metrics$sensitivity))
+}
+
+#print(results)
+
+results_sorted <- results[order(-results$Sensitivity), ]
+print(results_sorted)
+
+
+```
+
+```{r LDA best model}
+# Load required packages
+library(MASS)
+
+lda_model <- lda(mortstat ~ RIDAGEYR + BPXSY1 + BPXDI1, data = train_set)
+
+# Summary of the LDA model
+print(lda_model)
+
+# Make predictions on the test set using the optimal model
+test_pred <- predict(lda_model, newdata = test_set)$class
+
+rmse_lda <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
+cat("\nRoot Mean Squared Error (MSE) of Linear Discriminant Analysis (LDA):", rmse_lda, "\n\n")
+
+confusion_matrix_lda <- confusionMatrix(test_pred, factor(test_set$mortstat), positive = "1")
+print("Confusion Matrix for LDA:")
+print(confusion_matrix)
+```
+
+```{r QDA loopthrough}
+variables <- c("RIDAGEYR", "BPXSY1", "BPXDI1", "LBXRDW", "BPXML1", "BMXBMI", "BMXWAIST")
+
+evaluate_model_qda <- function(formula, train_data, test_data, test_response) {
+
+  qda_model <- qda(as.formula(formula), data = train_data)
+
+  predictions <- predict(qda_model, newdata = test_data)$class
+  
+  confusion_matrix <- table(predictions, test_response)
+
+  accuracy <- mean(predictions == test_response)
+  sensitivity <- confusion_matrix[2, 2] / (confusion_matrix[2, 2] + confusion_matrix[1, 2])  # Sensitivity 
+  specificity <- confusion_matrix[1, 1] / (confusion_matrix[1, 1] + confusion_matrix[2, 1])  # Specificity
+  
+  return((list(accuracy = accuracy, sensitivity = sensitivity, specificity = specificity)))
+}
+
+variables_comb <- list()
+for (i in 1:length(variables)) {
+  variables_comb <- c(variables_comb, combn(variables, i, simplify = FALSE))
+}
+
+results <- data.frame(Combination = character(), Accuracy = numeric(), Specificity = numeric(), Sensitivity = numeric(), stringsAsFactors = FALSE)
+
+# Loop over all combinations
+for (comb in variables_comb) {
+  formula <- paste("mortstat ~", paste(comb, collapse = " + "))
+  
+  metrics <- evaluate_model_qda(formula, train_set, test_set, test_set$mortstat)
+  
+  # Add the results to the dataframe
+  results <- rbind(results, data.frame(Combination = formula, 
+                                       Accuracy = metrics$accuracy,
+                                       Specificity = metrics$specificity,
+                                       Sensitivity = metrics$sensitivity))
+}
+
+#print(results)
+
+results_sorted <- results[order(-results$Sensitivity), ]
+print(results_sorted)
+```
+
+```{r QDA best model}
+# Load required packages
+library(MASS)
+
+qda_model <- qda(mortstat ~ RIDAGEYR + BPXML1, data = train_set)
+
+# Summary of the LDA model
+print(qda_model)
+
+# Make predictions on the test set using the optimal model
+test_pred <- predict(qda_model, newdata = test_set)$class
+
+rmse_qda <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
+cat("\nRoot Mean Squared Error (RMSE) Quadratic Discriminant Analysis (QDA):", rmse_qda, "\n\n")
+
+confusion_matrix_qda <- confusionMatrix(test_pred, factor(test_set$mortstat), positive = "1")
+print("Confusion Matrix for QDA:")
+print(confusion_matrix_qda)
+```
+
+Based on the observed QDA and LDA models with (1) combination of all variables and then (2) the specific statistics (confusion matrix and validity results) of the two optimal models, we could observe that for LDA, 3 variables were selected as the most important ones, `RIDAGEYR` (Age in Years), `BPXSY1` (Systolic Blood Pressure), and `BPXDI1` (Diastolic Blood Pressure). Notably, the group means suggest that participants who died are tend to be older, have higher systolic blood pressure & lower diastolic pressure compared to those who didn't die.
+
+Based on the LDA (optimal model) result, we can interpret that:
+
+1.  Age in years have the highest positive coefficient (1.080), meaning a higher age (relatively) increase the likelihood of the data point to be categorized into deceased group, and vice versa;
+
+2.  Systolic blood pressure and Diastolic blood pressure exhibited a mild positive & negative coefficient respectively, which means an increase in systolic blood pressure slightly contributes to the classification of deceased group (group 1), while an increase in diastolic pressure slightly reduces the likelihood.
+
+3.  The overall model accuracy is 80.04%, which is **significantly greater than the NIR (no information rate)**, thus it performs better than the baseline, i.e., simply classifying all individuals to the most frequent class (group 0, consist of \~73% of the data in both train and test sets).
+
+4.  The model's sensitivity is only 56.62%, which means it struggles when trying to detect people who died (true positives). We can see that for many model in this report, they all struggle with sensitivity. Part of the reason could be due to there are much more alive individuals in the data set than deceased (73% vs. 27%), so the two classes are imbalanced. This makes the model harder to predict those who died correctly, although it is often time what we care the most of.
+
+5.  Specificity of the model is 88.77%, which is higher than sensitivity. This suggests that the LDA model performed better in identifying alive individuals (because, first of all, there are a lot of data points than the other group).
+
+For QDA model, the optimal model included 2 variables, in which the model predict outcome `mortstat` based on `RIDAGEYR` (Age in Years) and `BPXML1` (Maximum inflation levels). we can observe that people who died have higher average maximum inflation level based on the grouped means, and the optimal model of QDA tells us that:
+
+1.  The overall model accuracy is 80.24%, which is slightly better than the LDA model, and it is still significantly better than the baseline prediction level, compared to the NIR.
+
+2.  The model still struggles with identifying deceased individuals (sensitivity = 57.35%) but is good at identifying alive individuals (specificity = 88.77%), although a slight improvement in sensitivity compared with optimal LDA model is observed.
+
+Overall speaking, QDA/LDA model using the optimal combination among the continuous variables gives an overall moderately good prediction, although sensitivity of these two models have room for improvement. But compared with previous set of models, they are indeed better.
+
+### Tree-based Models
+
+#### Classification (Decision) Tree
+
+Three kinds of tree-based models were explored in this project: Classification Tree (Decision Tree), Random Forest, Bagging, and Gradient Boosting Machines (GBM). Tree-based models are versatile, good for both continuous and categorical variables, and especially, no need for encoding of the data. They are ideal model for data set with mixed data types.
+
+I first run the decision tree model using `rpart` and `rpart.plot` package for model construction & tree visualization, then I decided to utilize the variable importance plot to infer future variable selection for all tree-based models.
+
+```{r decision tree}
+# Load required packages
+library(rpart)
+library(rpart.plot) # Visualization of the tree
+library(caret)
+library(ggplot2) # Visualization
+
+
+decision_tree_model <- rpart(mortstat ~ ., data = train_set, method = "class")
+
+rpart.plot(decision_tree_model, type = 2, extra = 109, fallen.leaves = TRUE, main = "Decision Tree for Individuals Mortality Statuses")
+
+test_pred <- predict(decision_tree_model, newdata = test_set, type = "class")
+#test_pred
+
+confusion_matrix_dt <- confusionMatrix(test_pred, factor(test_set$mortstat), positive = "1")
+
+print("Confusion Matrix for Decision Tree:")
+print(confusion_matrix_dt)
+
+rmse_tree <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
+cat("Root Mean Squared Error (RMSE) of Decision Tree:", rmse_tree, "\n")
+
+var_importance <- varImp(decision_tree_model)
+
+importance_df <- data.frame(Variable = rownames(var_importance), Importance = var_importance$Overall)
+
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "purple") +
+  coord_flip() +  # Flip the axes for better readability
+  labs(title = "Variable Importance Plot for Decision Tree (rpart library)", x = "Variables", y = "Importance") +
+  theme_classic()
+```
+
+Based on the result, we can summarize that:
+
+1.  Overall model performance experienced a huge boost with accuracy being 84.32% (significantly higher than baseline) and a sensitivity of 61.03%. We are glad to observe an increase in sensitivity. This suggests that the decision tree full model improved in detecting died individuals compared to previous models.
+
+Since we are still using the full model for decision tree, based on the previous expectations, I would expect that after selecting the top variables, the model performance will improve. Therefore, I re-trained the model using the top 7 variables based on the variable importance plot: `RIDAGEYR` (Age in years), `BPXSY1` (Systolic blood pressure measured in $mm \ Hg$), `BPXDI1` (Diastolic blood pressure measured in $mm \ Hg$), `LBXRDW` (Red cell distribution width (%)), `BMXWAIST` (Waist Circumference measured in $cm$), `HSD010` (General health condition), and `MCQ245A` (Work days missed for illness/maternity).
+
+```{r decision tree best model}
+decision_tree_model <- rpart(mortstat ~ BPXSY1 + BPXDI1 + LBXRDW + RIDAGEYR + MCQ245A + BMXWAIST + HSD010, data = train_set, method = "class")
+
+rpart.plot(decision_tree_model, type = 2, extra = 109, fallen.leaves = TRUE, main = "Decision Tree for Individuals Mortality Statuses")
+
+test_pred <- predict(decision_tree_model, newdata = test_set, type = "class")
+#test_pred
+
+confusion_matrix_dt_best <- confusionMatrix(test_pred, factor(test_set$mortstat), positive = "1")
+
+print("Confusion Matrix for Decision Tree:")
+print(confusion_matrix_dt_best)
+
+rmse_tree_best <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
+cat("Root Mean Squared Error (RMSE) of Decision Tree (optimized):", rmse_tree_best, "\n")
+```
+
+The result, however, suggested that the model is underfiting the data compared with training the model using the full set of variables. Both accuracy & sensitivity decreased compared to the previous decision tree model.
+
+#### Random Forest (with and w/o Bagging)
+
+For random forest model, we proceeded with similar procedures compared to the previous decision tree model. First, we run the random forest model using the full set of variables (continuous scaled). Then, based on importance plot,
+
+```{r randomforest}
+library(randomForest)
+library(caret)
+train_set$mortstat <- as.factor(train_set$mortstat)
+test_set$mortstat <- as.factor(test_set$mortstat)
+
+set.seed(123)
+rf_model <- randomForest(mortstat ~ ., data = train_set, importance = TRUE, ntree = 500)
+
+print(rf_model)
+plot(rf_model)
+
+test_pred <- predict(rf_model, test_set, type = "Class")
+#test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0)
+
+actual_values <- factor(test_set$mortstat, levels = c(0, 1))
+test_pred_binary <- factor(test_pred, levels = c(0, 1))
+
+confusion_matrix <- confusionMatrix(test_pred_binary, actual_values, positive = "1")
+
+print("Confusion Matrix for Random Forest:")
+print(confusion_matrix)
+
+rmse_rf <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
+cat("Root Mean Squared Error (MSE) of Random Forest:", rmse_rf, "\n")
+
+importance(rf_model)
+varImpPlot(rf_model, main = "Variable Importance Plot")
+```
+
+```{r randomforest with bagging}
+library(randomForest)
+
+set.seed(123)
+
+rf_bagging <- randomForest(mortstat ~ RIDAGEYR + BPXSY1 + BPXDI1 + LBXRDW + BMXBMI + BMXWAIST, data = train_set, mtry = 6 - 1, ntree = 500, importance = TRUE) # Perform bagging, all features were considered when trying to split the node
+
+print(rf_bagging)
+
+test_pred <- predict(rf_bagging, newdata = test_set, type = "class")
+
+actual_values <- factor(test_set$mortstat, levels = c(0, 1))
+test_pred_binary <- factor(test_pred, levels = c(0, 1))
+
+print("Confusion Matrix for Random Forest:")
+confusion_matrix <- confusionMatrix(test_pred_binary, actual_values, positive = "1")
+confusion_matrix
+```
+
+```{r boosting gbm}
+library(gbm)
+
+train_set$mortstat <- as.numeric(train_set$mortstat) - 1
+test_set$mortstat <- as.numeric(test_set$mortstat) - 1
+shrinkage_values <- c(0.01, 0.05, 0.1, 0.2, 0.3)
+results <- list()
+
+for (i in shrinkage_values) {
+  gbm_model <- gbm(
+    mortstat ~ .,               
+    data = train_set,            
+    distribution = "bernoulli",  
+    n.trees = 100,               
+    interaction.depth = 3,       
+    shrinkage = i,      
+    n.minobsinnode = 10,        
+    cv.folds = 10,               
+    verbose = FALSE             
+  )
+  
+  best_trees <- gbm.perf(gbm_model, method = "cv", plot.it = FALSE)
+  
+  results[[as.character(i)]] <- list(
+    model = gbm_model,
+    best_trees = best_trees,
+    cv_error = gbm_model$cv.error[best_trees]
+  )
+}
+
+summary(gbm_model)
+
+best_shrinkage <- shrinkage_values[which.min(sapply(results, function(x) x$cv_error))]
+
+cat("Best shrinkage value:", best_shrinkage, "\n")
+
+# Retrieve the best model based on shrinkage
+best_model <- results[[as.character(best_shrinkage)]]$model
+best_trees <- results[[as.character(best_shrinkage)]]$best_trees
+
+# Make predictions on the test set using the best model
+test_preds <- predict(best_model, newdata = test_set, n.trees = best_trees, type = "response")
+#test_preds
+test_preds_binary <- ifelse(test_preds >= 0.5, 1, 0)
+
+# Now create the confusion matrix
+confusion_matrix <- confusionMatrix(as.factor(test_preds_binary), as.factor(test_set$mortstat), positive = "1")
+
+print(confusion_matrix)
+
+# Calculate MSE
+rmse_gbm <- sqrt(mean((as.numeric(test_preds_binary) - as.numeric(test_set$mortstat))^2))
+cat("Best GBM Root Mean Squared Error (RMSE) with tuned shrinkage value:", rmse_gbm, "\n")
+```
+
+```{r svm}
+library(e1071)
+
+alive_group_raw <- imputed_data %>% filter(mortstat == 0) %>% dplyr::select(-SEQN)
+deceased_group_raw <- imputed_data %>% filter(mortstat == 1) %>% dplyr::select(-SEQN)
+
+set.seed(123456)
+
+alive_train_ind_raw <- sample(seq_len(nrow(alive_group_raw)), size = floor(0.8 * nrow(alive_group_raw)))
+alive_train_raw <- alive_group_raw[alive_train_ind_raw, ]
+alive_test_raw <- alive_group_raw[-alive_train_ind_raw, ]
+
+deceased_train_ind_raw <- sample(seq_len(nrow(deceased_group_raw)), size = floor(0.8 * nrow(deceased_group_raw)))
+deceased_train_raw <- deceased_group_raw[deceased_train_ind_raw, ]
+deceased_test_raw <- deceased_group_raw[-deceased_train_ind_raw, ]
+
+train_set <- bind_rows(alive_train_raw, deceased_train_raw)
+test_set <- bind_rows(alive_test_raw, deceased_test_raw)
+
+train_set$mortstat <- as.factor(train_set$mortstat)
+test_set$mortstat <- as.factor(test_set$mortstat)
+
+
+x_train <- train_set %>% dplyr::select(-mortstat)
+y_train <- train_set$mortstat
+
+x_test <- test_set %>% dplyr::select(-mortstat)
+y_test <- test_set$mortstat 
+
+
+svm_linear_tune <- tune(svm, mortstat ~ RIDAGEYR + BPXSY1 + BPXDI1 + LBXRDW, data = train_set, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 10)))
+
+summary(svm_linear_tune)
+
+best_svm_model <- svm_linear_tune$best.model
+test_pred_linear <- predict(best_svm_model, newdata = test_set)
+
+test_preds_binary <- ifelse(test_pred_linear >= 0.5, 1, 0)
+confusion_matrix_linear <- confusionMatrix(as.factor(test_preds_binary), as.factor(test_set$mortstat), positive = "1")
+confusion_matrix_linear
+
+test_pred_numeric <- as.numeric(test_pred_linear) - 1
+actual_values_numeric <- as.numeric(test_set$mortstat) - 1
+
+
+mse_linear <- mean((test_pred_numeric - actual_values_numeric)^2)
+
+cost <- c(0.001, 0.01, 0.1, 1, 10)
+gamma <- c(0.0001, 0.001, 0.01, 0.1, 1)
+
+
+svm_tune_rad <- tune(svm, 
+                     mortstat ~ ,                   # Formula with all predictors
+                     data = train_set,               # Your training dataset
+                     kernel = "radial",              # Radial kernel
+                     ranges = list(cost = cost, gamma = gamma))  # Grid for hyperparameters
+
+# View the results of the tuning
+summary(svm_tune_rad)
+
+
+best_svm_model <- svm_tune_rad$best.model
+test_pred_radial <- predict(best_svm_model, newdata = test_set)
+
+confusion_matrix_radial <- confusionMatrix(test_pred_radial, test_set$mortstat)
+confusion_matrix_radial
+
+degrees <- c(2, 3, 4)
+
+svm_tune_poly <- tune(svm, mortstat ~ ., data = train_set, kernel = "polynomial", ranges = list(cost = cost, degree = degrees))
+
+summary(svm_tune_poly)
+
+best_svm_model <- svm_tune_poly$best.model
+test_pred_poly <- predict(best_svm_model, newdata = test_set)
+confusion_matrix_poly <- confusionMatrix(test_pred_poly, test_set$mortstat)
+confusion_matrix_poly
+
+```
