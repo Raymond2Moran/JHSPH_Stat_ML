@@ -56,13 +56,13 @@ print(percent_na)
 # Drop the participants whose `mortstat` = NA
 
 
-cat("\nDimension of the data frame after dropping NA's in `mortstats`:\n")
+cat("Dimension of the data frame after dropping NA's in `mortstats`:\n")
 print(dim(data))
 
 # Re-check percentage of NA values
 
 percent_na <- sapply(data, function(col) sum(is.na(col)) / length(col) * 100)
-cat("\nPercentage of NA values after filtering for mortality statuses:\n")
+cat("Percentage of NA values after filtering for mortality statuses:\n")
 print(percent_na)
 
 
@@ -135,7 +135,7 @@ imputed_data <- rbind(alive_group, deceased_group)
 summary(imputed_data)
 
 percent_na <- sapply(imputed_data, function(col) sum(is.na(col)) / length(col) * 100)
-cat("\nPercentage of NA values after imputation:\n")
+cat("Percentage of NA values after imputation:\n")
 print(percent_na)
 ```
 
@@ -239,14 +239,14 @@ do.call(grid.arrange, c(plots, ncol = 4, nrow = 2))
 cat("Training Set Mortality Status Distribution:\n")
 print(table(train_set$mortstat))
 
-cat("\nTest Set Mortality Status Distribution:\n")
+cat("Test Set Mortality Status Distribution:\n")
 print(table(test_set$mortstat))
 
 # Display the proportion of alive and deceased in train and test sets
-cat("\nProportion of Alive and Deceased in Training Set:\n")
+cat("Proportion of Alive and Deceased in Training Set:\n")
 print(prop.table(table(train_set$mortstat)))
 
-cat("\nProportion of Alive and Deceased in Test Set:\n")
+cat("Proportion of Alive and Deceased in Test Set:\n")
 print(prop.table(table(test_set$mortstat)))
 
 train_set <- train_set %>%
@@ -292,7 +292,7 @@ rmse_logistic <- sqrt(mean((test_set$mortstat - test_pred)^2))
 cat("Root Mean Squared Error (RMSE) on the test set for logistic regression:", rmse_logistic, "\n\n")
 confusion_matrix_logistic <- confusionMatrix(factor(test_pred_binary), factor(test_set$mortstat), positive = "1") # Set the positive class to 1 so that 
 
-print(confusion_matrix)
+print(confusion_matrix_logistic)
 ```
 
 From the summary of the un-optimized model, we can conclude that:
@@ -375,8 +375,8 @@ variable_names_lasso <- lasso_coefs@Dimnames[[1]]
 non_zero_vars_lasso <- variable_names_lasso[non_zero_ind_lasso]
 
 lasso_results <- data.frame(
-  Variable = non_zero_variables,
-  Coefficient = non_zero_coefs
+  Variable = non_zero_vars_lasso,
+  Coefficient = non_zero_coefs_lasso
 )
 
 lasso_results_sorted <- lasso_results[order(-lasso_results$Coefficient), ]
@@ -411,8 +411,8 @@ variable_names_ridge <- ridge_coefs@Dimnames[[1]]
 non_zero_vars_ridge <- variable_names_ridge[non_zero_ind_ridge]
 
 ridge_results <- data.frame(
-  Variable = non_zero_variables,
-  Coefficient = non_zero_coefs
+  Variable = non_zero_vars_ridge,
+  Coefficient = non_zero_coefs_ridge
 )
 
 ridge_results_sorted <- ridge_results[order(-ridge_results$Coefficient), ]
@@ -549,10 +549,8 @@ for (comb in variables_comb) {
 
 #print(results)
 
-results_sorted <- results[order(-results$Sensitivity), ]
-print(results_sorted)
-
-
+results_sorted <- results[order(-results$Sensitivity), ] # care about sensitivity
+print(head(results_sorted, 6)) # Only top 6
 ```
 
 ```{r LDA best model}
@@ -568,11 +566,11 @@ print(lda_model)
 test_pred <- predict(lda_model, newdata = test_set)$class
 
 rmse_lda <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
-cat("\nRoot Mean Squared Error (MSE) of Linear Discriminant Analysis (LDA):", rmse_lda, "\n\n")
+cat("Root Mean Squared Error (MSE) of Linear Discriminant Analysis (LDA):", rmse_lda, "\n\n")
 
 confusion_matrix_lda <- confusionMatrix(test_pred, factor(test_set$mortstat), positive = "1")
 print("Confusion Matrix for LDA:")
-print(confusion_matrix)
+print(confusion_matrix_lda)
 ```
 
 ```{r QDA loopthrough}
@@ -616,7 +614,7 @@ for (comb in variables_comb) {
 #print(results)
 
 results_sorted <- results[order(-results$Sensitivity), ]
-print(results_sorted)
+print(head(results_sorted, 6)) # Only top 6
 ```
 
 ```{r QDA best model}
@@ -632,7 +630,7 @@ print(qda_model)
 test_pred <- predict(qda_model, newdata = test_set)$class
 
 rmse_qda <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
-cat("\nRoot Mean Squared Error (RMSE) Quadratic Discriminant Analysis (QDA):", rmse_qda, "\n\n")
+cat("Root Mean Squared Error (RMSE) Quadratic Discriminant Analysis (QDA):", rmse_qda, "\n\n")
 
 confusion_matrix_qda <- confusionMatrix(test_pred, factor(test_set$mortstat), positive = "1")
 print("Confusion Matrix for QDA:")
@@ -730,7 +728,7 @@ The result, however, suggested that the model is underfiting the data compared w
 
 #### Random Forest (with and w/o Bagging)
 
-For random forest model, we proceeded with similar procedures compared to the previous decision tree model. First, we run the random forest model using the full set of variables (continuous scaled). Then, based on importance plot,
+For random forest model, we proceeded with similar procedures as the previous decision tree model. First, we run the random forest model using the full set of variables (continuous scaled). Then, based on importance plot, we **selected top few variables (most important ones) and re-train the model using random forest with bagging**.
 
 ```{r randomforest}
 library(randomForest)
@@ -750,17 +748,26 @@ test_pred <- predict(rf_model, test_set, type = "Class")
 actual_values <- factor(test_set$mortstat, levels = c(0, 1))
 test_pred_binary <- factor(test_pred, levels = c(0, 1))
 
-confusion_matrix <- confusionMatrix(test_pred_binary, actual_values, positive = "1")
+confusion_matrix_rf <- confusionMatrix(test_pred_binary, actual_values, positive = "1")
 
 print("Confusion Matrix for Random Forest:")
-print(confusion_matrix)
+print(confusion_matrix_rf)
 
 rmse_rf <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortstat))^2))
-cat("Root Mean Squared Error (MSE) of Random Forest:", rmse_rf, "\n")
+cat("Root Mean Squared Error (RMSE) of Random Forest:", rmse_rf, "\n\n")
 
-importance(rf_model)
-varImpPlot(rf_model, main = "Variable Importance Plot")
+importance_df <- as.data.frame(importance(rf_model))
+importance_sorted <- importance_df[order(importance_df$MeanDecreaseAccuracy, decreasing = TRUE), ]
+
+# Show the top 6 rows
+print(head(importance_sorted, 6))
+
+varImpPlot(rf_model, main = "Variable Importance Plot -- Random Forest", cex = 0.75)
 ```
+
+We can observe yet another improvement in overall model performance, with a high model accuracy over 88% and a best model sensitivity (up till now) of 68.38%; it is also worth noting that the specificity achieved over 95%, which suggest that this model is nearly perfect identifying alive individual features and picking them out. Overall speaking, we observed a huge improvement in model sensitivities for tree-based models compared to previous models tested.
+
+By looking at the variable importance statistics, and the importance plot, we picked the top 6 variables to re-train the model with bagging method added to the random forest. These variables include: `RIDAGEYR` (Age in years), `BPXSY1` (Systolic blood pressure measured in $mm \ Hg$), `BPXDI1` (Diastolic blood pressure measured in $mm \ Hg$), `LBXRDW` (Red cell distribution width (%)), `BMXWAIST` (Waist Circumference measured in $cm$), `BMXBMI` (Body Mass Index), and `BPXML1` (Maximum inflation levels).
 
 ```{r randomforest with bagging}
 library(randomForest)
@@ -776,46 +783,82 @@ test_pred <- predict(rf_bagging, newdata = test_set, type = "class")
 actual_values <- factor(test_set$mortstat, levels = c(0, 1))
 test_pred_binary <- factor(test_pred, levels = c(0, 1))
 
-print("Confusion Matrix for Random Forest:")
-confusion_matrix <- confusionMatrix(test_pred_binary, actual_values, positive = "1")
-confusion_matrix
+cat("Confusion Matrix for Random Forest with Bagging:\n\n")
+confusion_matrix_rf_bagging <- confusionMatrix(test_pred_binary, actual_values, positive = "1")
+confusion_matrix_rf_bagging
 ```
 
+After selecting for variables and added bagging to the random forest model, we can see that the model further improved its accuracy to over 89%, which is (of course) significantly better than the NIR. The model also obtained an all-time-high sensitivity of 76.47%. Considering that our data set have only \~27% of deceased individuals (both training and test set), being able to successfully predict over three quarters of them suggest that random forest (or random forest with bagging) may be the best strategy to carry out the prediction.
+
+#### Boosting
+
+For the last tree-based model, we carried out boosting, with tuning from a list of shrinkage values and find out the best one with smallest cross validation error.
+
 ```{r boosting gbm}
+# Load required packages
 library(gbm)
 
 train_set$mortstat <- as.numeric(train_set$mortstat) - 1
 test_set$mortstat <- as.numeric(test_set$mortstat) - 1
+
+
 shrinkage_values <- c(0.01, 0.05, 0.1, 0.2, 0.3)
 results <- list()
+plot_list <- list()
 
-for (i in shrinkage_values) {
+
+min_cv_error <- Inf
+best_shrinkage <- NA
+
+for (values in shrinkage_values) {
   gbm_model <- gbm(
     mortstat ~ .,               
     data = train_set,            
     distribution = "bernoulli",  
-    n.trees = 100,               
+    n.trees = 500,               
     interaction.depth = 3,       
-    shrinkage = i,      
+    shrinkage = values,      
     n.minobsinnode = 10,        
     cv.folds = 10,               
     verbose = FALSE             
   )
   
   best_trees <- gbm.perf(gbm_model, method = "cv", plot.it = FALSE)
+
+  # Save all training error (early stopping) plot in the list
+  plot_list[[as.character(values)]] <- function(gbm_model_local, i_local) {
+    plot(gbm_model_local$cv.error, type = "l", main = paste("Shrinkage =", i_local), 
+         ylab = "CV Error", xlab = "# Trees")
+    abline(v = gbm.perf(gbm_model_local, method = "cv", plot.it = FALSE), col = "blue", lty = 2)
+  }
   
-  results[[as.character(i)]] <- list(
+  results[[as.character(values)]] <- list(
     model = gbm_model,
     best_trees = best_trees,
     cv_error = gbm_model$cv.error[best_trees]
   )
 }
 
-summary(gbm_model)
+par(mfrow = c(2, 3))
 
-best_shrinkage <- shrinkage_values[which.min(sapply(results, function(x) x$cv_error))]
+for (i in names(plot_list)) {
+  plot_list[[i]](results[[i]]$model, i)  # Pass the correct model and shrinkage value to each function
+}
 
-cat("Best shrinkage value:", best_shrinkage, "\n")
+par(mfrow = c(1, 1))
+
+head(summary(gbm_model), 6)
+
+for (i in seq_along(results)) {
+  current_cv_error <- results[[i]]$cv_error
+  
+  if (current_cv_error < min_cv_error) {
+    min_cv_error <- current_cv_error
+    best_shrinkage <- shrinkage_values[i]  # Update best shrinkage value
+  }
+}
+
+cat("Best shrinkage value:", best_shrinkage, "\n\n")
 
 # Retrieve the best model based on shrinkage
 best_model <- results[[as.character(best_shrinkage)]]$model
@@ -823,95 +866,95 @@ best_trees <- results[[as.character(best_shrinkage)]]$best_trees
 
 # Make predictions on the test set using the best model
 test_preds <- predict(best_model, newdata = test_set, n.trees = best_trees, type = "response")
-#test_preds
+
 test_preds_binary <- ifelse(test_preds >= 0.5, 1, 0)
 
 # Now create the confusion matrix
-confusion_matrix <- confusionMatrix(as.factor(test_preds_binary), as.factor(test_set$mortstat), positive = "1")
+confusion_matrix_gbm <- confusionMatrix(as.factor(test_preds_binary), as.factor(test_set$mortstat), positive = "1")
 
-print(confusion_matrix)
+print(confusion_matrix_gbm)
 
 # Calculate MSE
 rmse_gbm <- sqrt(mean((as.numeric(test_preds_binary) - as.numeric(test_set$mortstat))^2))
 cat("Best GBM Root Mean Squared Error (RMSE) with tuned shrinkage value:", rmse_gbm, "\n")
 ```
 
+For the first group of plot (CV Error vs. \# of Trees), we can interpret the reason why Shrinkage = 0.05 is the best shrinkage value. For smaller shrinkage (e.g., 0.01), the model requires a higher number of trees to reach a low error compared to 0.05, making the training process inefficient; for larger value (0.01, 0.2, or 0.3), the CV error starts increasing rapidly after a small number of trees, and thus indicating overfiting of the model.
+
+As for the model performance and variable importance, we can observe a similar (yet slightly lower) accuracy of \~86%, however, the sensitivity decreased compared to previous random forest with bagging model. This could be due to several reasons:
+
+1.  GBM is prone to overfitting, since trees are build sequentially to correct for errors of the previous tree;
+
+2.  Random forest, compared to GBM, is less sensitive to imbalanced data. Especially for the case of bagging, since it builds independent trees on bootstrapped samples.
+
+3.  Random Forest is a collection of decision trees built in parallel. This could suggest better generalization on the minority class. In our cases, the minority class is the deceased individuals (group 1).
+
+### Support Vector Machines (SVMs)
+
+As the last part of the model construction and testing, we perform Support Vector Machines (SVMs) model construction, tuning, and testing. All three major kernels, including linear, radial, and polynomial kernels were tested. Cost, $\gamma$, and degrees of polynomials were looped through a ranges of values.
+
 ```{r svm}
 library(e1071)
-
-alive_group_raw <- imputed_data %>% filter(mortstat == 0) %>% dplyr::select(-SEQN)
-deceased_group_raw <- imputed_data %>% filter(mortstat == 1) %>% dplyr::select(-SEQN)
-
-set.seed(123456)
-
-alive_train_ind_raw <- sample(seq_len(nrow(alive_group_raw)), size = floor(0.8 * nrow(alive_group_raw)))
-alive_train_raw <- alive_group_raw[alive_train_ind_raw, ]
-alive_test_raw <- alive_group_raw[-alive_train_ind_raw, ]
-
-deceased_train_ind_raw <- sample(seq_len(nrow(deceased_group_raw)), size = floor(0.8 * nrow(deceased_group_raw)))
-deceased_train_raw <- deceased_group_raw[deceased_train_ind_raw, ]
-deceased_test_raw <- deceased_group_raw[-deceased_train_ind_raw, ]
-
-train_set <- bind_rows(alive_train_raw, deceased_train_raw)
-test_set <- bind_rows(alive_test_raw, deceased_test_raw)
 
 train_set$mortstat <- as.factor(train_set$mortstat)
 test_set$mortstat <- as.factor(test_set$mortstat)
 
+cost <- c(0.001, 0.01, 0.1, 1, 10)
+gamma <- c(0.0001, 0.001, 0.01, 0.1, 1)
+degrees <- c(2, 3, 4)
 
-x_train <- train_set %>% dplyr::select(-mortstat)
-y_train <- train_set$mortstat
+# Linear kernel
 
-x_test <- test_set %>% dplyr::select(-mortstat)
-y_test <- test_set$mortstat 
-
-
-svm_linear_tune <- tune(svm, mortstat ~ RIDAGEYR + BPXSY1 + BPXDI1 + LBXRDW, data = train_set, kernel = "linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 10)))
+svm_linear_tune <- tune(svm, 
+                        mortstat ~ ., 
+                        data = train_set %>% dplyr::select(all_of(continuous_vars), mortstat), 
+                        kernel = "linear", 
+                        ranges = list(cost = cost))
 
 summary(svm_linear_tune)
 
 best_svm_model <- svm_linear_tune$best.model
 test_pred_linear <- predict(best_svm_model, newdata = test_set)
-
-test_preds_binary <- ifelse(test_pred_linear >= 0.5, 1, 0)
-confusion_matrix_linear <- confusionMatrix(as.factor(test_preds_binary), as.factor(test_set$mortstat), positive = "1")
+confusion_matrix_linear <- confusionMatrix(as.factor(test_pred_linear), as.factor(test_set$mortstat), positive = "1")
 confusion_matrix_linear
 
-test_pred_numeric <- as.numeric(test_pred_linear) - 1
-actual_values_numeric <- as.numeric(test_set$mortstat) - 1
+rmse_linear_svm <- sqrt(mean((as.numeric(test_pred_linear) - as.numeric(test_set$mortstat))^2))
+cat("Best Root Mean Squared Error (RMSE) of SVM with linear kernel:", rmse_linear_svm, "\n\n")
 
+# Radial kernel
 
-mse_linear <- mean((test_pred_numeric - actual_values_numeric)^2)
+svm_tune_rad <- tune(svm,
+                     mortstat ~ .,
+                     data = train_set %>% dplyr::select(all_of(continuous_vars), mortstat),
+                     kernel = "radial",
+                     ranges = list(cost = cost, gamma = gamma))
 
-cost <- c(0.001, 0.01, 0.1, 1, 10)
-gamma <- c(0.0001, 0.001, 0.01, 0.1, 1)
-
-
-svm_tune_rad <- tune(svm, 
-                     mortstat ~ ,                   # Formula with all predictors
-                     data = train_set,               # Your training dataset
-                     kernel = "radial",              # Radial kernel
-                     ranges = list(cost = cost, gamma = gamma))  # Grid for hyperparameters
-
-# View the results of the tuning
 summary(svm_tune_rad)
 
 
 best_svm_model <- svm_tune_rad$best.model
 test_pred_radial <- predict(best_svm_model, newdata = test_set)
-
-confusion_matrix_radial <- confusionMatrix(test_pred_radial, test_set$mortstat)
+confusion_matrix_radial <- confusionMatrix(as.factor(test_pred_radial), as.factor(test_set$mortstat), positive = "1")
 confusion_matrix_radial
 
-degrees <- c(2, 3, 4)
+rmse_radial_svm <- sqrt(mean((as.numeric(test_pred_radial) - as.numeric(test_set$mortstat))^2))
+cat("Best Root Mean Squared Error (RMSE) of SVM with radial kernel:", rmse_radial_svm, "\n\n")
 
-svm_tune_poly <- tune(svm, mortstat ~ ., data = train_set, kernel = "polynomial", ranges = list(cost = cost, degree = degrees))
+# Polynomial kernel
+
+svm_tune_poly <- tune(svm, 
+                      mortstat ~ ., 
+                      data = train_set %>% dplyr::select(all_of(continuous_vars), mortstat),
+                      kernel = "polynomial", 
+                      ranges = list(cost = cost, degree = degrees))
 
 summary(svm_tune_poly)
 
 best_svm_model <- svm_tune_poly$best.model
 test_pred_poly <- predict(best_svm_model, newdata = test_set)
-confusion_matrix_poly <- confusionMatrix(test_pred_poly, test_set$mortstat)
+confusion_matrix_poly <- confusionMatrix(as.factor(test_pred_poly), as.factor(test_set$mortstat), positive = "1")
 confusion_matrix_poly
 
+rmse_poly_svm <- sqrt(mean((as.numeric(test_pred_poly) - as.numeric(test_set$mortstat))^2))
+cat("Best Root Mean Squared Error (RMSE) of SVM with polynomial kernel:", rmse_poly_svm, "\n\n")
 ```
