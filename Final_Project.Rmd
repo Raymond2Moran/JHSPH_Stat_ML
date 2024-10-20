@@ -324,7 +324,7 @@ test_pred_binary <- ifelse(test_pred >= 0.5, 1, 0) # Convert the final probabili
 rmse_logistic_best <- sqrt(mean((test_set$mortstat - test_pred)^2))
 
 cat("Root Mean Squared Error (RMSE) on the test set for logistic regression:", rmse_logistic_best, "\n\n")
-confusion_matrix_logistic_best <- confusionMatrix(factor(test_pred_binary), factor(test_set$mortstat), positive = "1") # Set the positive class to 1 so that 
+confusion_matrix_logistic_best <- confusionMatrix(factor(test_pred_binary), factor(test_set$mortstat), positive = "1") # Set the positive class to 1 so that the relevant statistics are correct
 
 print(confusion_matrix_logistic_best)
 ```
@@ -724,19 +724,21 @@ rmse_tree_best <- sqrt(mean((as.numeric(test_pred) - as.numeric(test_set$mortsta
 cat("Root Mean Squared Error (RMSE) of Decision Tree (optimized):", rmse_tree_best, "\n")
 ```
 
-The result, however, suggested that the model is underfiting the data compared with training the model using the full set of variables. Both accuracy & sensitivity decreased compared to the previous decision tree model.
+The result, however, suggested that the model is under-fitting the data compared with training the model using the full set of variables. Both accuracy & sensitivity decreased compared to the previous decision tree model.
 
 #### Random Forest (with and w/o Bagging)
 
 For random forest model, we proceeded with similar procedures as the previous decision tree model. First, we run the random forest model using the full set of variables (continuous scaled). Then, based on importance plot, we **selected top few variables (most important ones) and re-train the model using random forest with bagging**.
 
 ```{r randomforest}
+# Load required packages
 library(randomForest)
 library(caret)
+
+set.seed(123)
 train_set$mortstat <- as.factor(train_set$mortstat)
 test_set$mortstat <- as.factor(test_set$mortstat)
 
-set.seed(123)
 rf_model <- randomForest(mortstat ~ ., data = train_set, importance = TRUE, ntree = 500)
 
 print(rf_model)
@@ -770,11 +772,9 @@ We can observe yet another improvement in overall model performance, with a high
 By looking at the variable importance statistics, and the importance plot, we picked the top 6 variables to re-train the model with bagging method added to the random forest. These variables include: `RIDAGEYR` (Age in years), `BPXSY1` (Systolic blood pressure measured in $mm \ Hg$), `BPXDI1` (Diastolic blood pressure measured in $mm \ Hg$), `LBXRDW` (Red cell distribution width (%)), `BMXWAIST` (Waist Circumference measured in $cm$), `BMXBMI` (Body Mass Index), and `BPXML1` (Maximum inflation levels).
 
 ```{r randomforest with bagging}
-library(randomForest)
-
 set.seed(123)
 
-rf_bagging <- randomForest(mortstat ~ RIDAGEYR + BPXSY1 + BPXDI1 + LBXRDW + BMXBMI + BMXWAIST, data = train_set, mtry = 6 - 1, ntree = 500, importance = TRUE) # Perform bagging, all features were considered when trying to split the node
+rf_bagging <- randomForest(mortstat ~ RIDAGEYR + BPXSY1 + BPXDI1 + LBXRDW + BMXBMI + BMXWAIST, data = train_set, mtry = 6 - 1, ntree = 500, importance = TRUE) # Perform bagging, all features were considered when trying to split the node (using `mtry`)
 
 print(rf_bagging)
 
@@ -860,7 +860,7 @@ for (i in seq_along(results)) {
 
 cat("Best shrinkage value:", best_shrinkage, "\n\n")
 
-# Retrieve the best model based on shrinkage
+# Get the best model
 best_model <- results[[as.character(best_shrinkage)]]$model
 best_trees <- results[[as.character(best_shrinkage)]]$best_trees
 
@@ -869,12 +869,12 @@ test_preds <- predict(best_model, newdata = test_set, n.trees = best_trees, type
 
 test_preds_binary <- ifelse(test_preds >= 0.5, 1, 0)
 
-# Now create the confusion matrix
+# Confusion matrix
 confusion_matrix_gbm <- confusionMatrix(as.factor(test_preds_binary), as.factor(test_set$mortstat), positive = "1")
 
 print(confusion_matrix_gbm)
 
-# Calculate MSE
+# Calculate RMSE
 rmse_gbm <- sqrt(mean((as.numeric(test_preds_binary) - as.numeric(test_set$mortstat))^2))
 cat("Best GBM Root Mean Squared Error (RMSE) with tuned shrinkage value:", rmse_gbm, "\n")
 ```
@@ -883,7 +883,7 @@ For the first group of plot (CV Error vs. \# of Trees), we can interpret the rea
 
 As for the model performance and variable importance, we can observe a similar (yet slightly lower) accuracy of \~86%, however, the sensitivity decreased compared to previous random forest with bagging model. This could be due to several reasons:
 
-1.  GBM is prone to overfitting, since trees are build sequentially to correct for errors of the previous tree;
+1.  GBM is prone to over-fitting, since trees are build sequentially to correct for errors of the previous tree;
 
 2.  Random forest, compared to GBM, is less sensitive to imbalanced data. Especially for the case of bagging, since it builds independent trees on bootstrapped samples.
 
@@ -892,6 +892,8 @@ As for the model performance and variable importance, we can observe a similar (
 ### Support Vector Machines (SVMs)
 
 As the last part of the model construction and testing, we perform Support Vector Machines (SVMs) model construction, tuning, and testing. All three major kernels, including linear, radial, and polynomial kernels were tested. Cost, $\gamma$, and degrees of polynomials were looped through a ranges of values.
+
+As for the variable selection, considering that the Support Vector Machines are designed to separate two classes by a hyper-plane that maximize the distances (linear kernel for linear SVMs, radial / polynomial kernel SVMs for higher degrees), the models need to calculate distances between data points, so they expect all the variables fitted to be numerical. This suggests that encoded categorical variables are necessary before feeding into the SVM model. However, the performance of SVMs can be subject to highly correlated values after encoding (or multi-olinearity), and it performed poorly when we include the encoded variables in the model. Therefore, we finally decided to only use continuous variables to train & build SVM models.
 
 ```{r svm}
 library(e1071)
@@ -907,7 +909,7 @@ degrees <- c(2, 3, 4)
 
 svm_linear_tune <- tune(svm, 
                         mortstat ~ ., 
-                        data = train_set %>% dplyr::select(all_of(continuous_vars), mortstat), 
+                        data = train_set %>% dplyr::select(all_of(continuous_vars), mortstat), # Include only continuous variables
                         kernel = "linear", 
                         ranges = list(cost = cost))
 
@@ -959,6 +961,7 @@ rmse_poly_svm <- sqrt(mean((as.numeric(test_pred_poly) - as.numeric(test_set$mor
 cat("Best Root Mean Squared Error (RMSE) of SVM with polynomial kernel:", rmse_poly_svm, "\n\n")
 ```
 
+From the model performance of SVMs, we can observe that the three SVM models achieved similar model accuracy around 78% to 80%. However, the model sensitivity are all lower than 50%, which is similar compared to previous Logsitic/Lasso/Ridge regression model. This result suggests that SVMs are not optimal for our purpose.
 
 ## Conclusion
 
@@ -1013,7 +1016,7 @@ for (i in seq(1, length(conf_matrix_list), by = 6)) {
   # Extract metrics
   #conf_matrix <- conf_matrix_list[[i]]
   accuracy <- conf_matrix_list[[i+2]]['Accuracy'][[1]]
-  print(accuracy)
+  #print(accuracy)
   sensitivity <- conf_matrix_list[[i+3]]['Sensitivity'][[1]]
   specificity <- conf_matrix_list[[i+3]]['Specificity'][[1]]
   
@@ -1026,12 +1029,14 @@ for (i in seq(1, length(conf_matrix_list), by = 6)) {
   label_n <- label_n + 1
 }
 
-print(metrics_df)
+metrics_df <- metrics_df[order(-metrics_df$Accuracy, -metrics_df$Sensitivity), ]
 
 metrics_df$Model_Group <- ifelse(grepl("SVM", metrics_df$Model), "SVM",
                           ifelse(grepl("Tree|Random|GBM", metrics_df$Model), "Tree-based Model",
                           ifelse(grepl("Logistic|Lasso|Ridge", metrics_df$Model), "Logistic/Lasso/Ridge",
                           ifelse(grepl("QDA|LDA", metrics_df$Model), "QDA/LDA", "Other"))))
+
+print(metrics_df)
 
 ggplot(metrics_df, aes(x = Specificity, y = Sensitivity, color = Model_Group, label = Model)) +
   scale_color_brewer(palette="Dark2") + 
@@ -1052,3 +1057,7 @@ ggplot(metrics_df, aes(x = Specificity, y = Sensitivity, color = Model_Group, la
   
 
 ```
+
+Based on the model metrics data frame and the scatter plot, we can see that tree-based models performed the best with **the highest accuracy & model sensitivity**, with **Random Forest with Bagging being the model with the overall best performance**. This suggests that Random Forest with Bagging correctly predicted the mortality statuses of around 90% of the individuals in the test set, and correctly identified over 76% of the deceased individuals (with a training data of only 27% of deceased individuals available). This makes it the best model for the given `NHANES 2003-2004` data set.
+
+From the result, we can see that the four tree-based models performed overwhelmingly better than the rest of the models. This might be due to important variables contain a mixture of continuous and categorical variables: continuous variables such as `RIDAGEYR`, `LBXRDW`, categorical variables such as `HSD010`, all of them are informative when doing the predictions. Tree-based model can leverage this mixed data type better than the other model evaluated in this project.
