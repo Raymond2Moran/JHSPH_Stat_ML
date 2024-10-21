@@ -1050,9 +1050,9 @@ ggplot(metrics_df, aes(x = Specificity, y = Sensitivity, color = Model_Group, la
   ) +
   theme_classic() + 
   theme(
-    legend.position = "bottom",            # Move legend to the right
-    legend.title = element_text(size = 11, face = "bold"),  # Adjust legend title font
-    legend.text = element_text(size = 10)  # Adjust legend text size
+    legend.position = "bottom",
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10)
   )
   
 
